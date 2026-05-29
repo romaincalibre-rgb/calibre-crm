@@ -1,5 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 
+// -- SUPABASE --
+const SUPA_URL = "https://wzygqvtexcyamoqayidf.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6eWdxdnRleGN5YW1vcWF5aWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDczMzgsImV4cCI6MjA5NTYyMzMzOH0.fvQO5s7-XH9DxzHfWzDBqLbtqbIJ7Tp1h2c_IdsP-a4";
+const SH = {"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":"Bearer "+SUPA_KEY};
+const db = {
+  async get(t){try{const r=await fetch(SUPA_URL+"/rest/v1/"+t+"?order=created_at.asc",{headers:SH});return await r.json();}catch{return [];}},
+  async upsert(t,d){try{await fetch(SUPA_URL+"/rest/v1/"+t,{method:"POST",headers:{...SH,"Prefer":"resolution=merge-duplicates"},body:JSON.stringify(d)});}catch{}},
+};
+const getLS=()=>{try{return localStorage.getItem("cal_v8_s");}catch{return null;}};
+const setLS=(id)=>{try{localStorage.setItem("cal_v8_s",id||"");}catch{}};
+
 const CODE_AGENCE = "CALIBRE2026";
 const LAC_BG = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80&fit=crop";
 const LAC_BG_2 = "https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=800&q=75&fit=crop";
@@ -13,10 +24,10 @@ const C = {
   success:"#0d9e6e", warning:"#c8820a", danger:"#c0392b",
 };
 
-const ROLES = ["Directeur","Agent","Agente","Négociateur","Négociatrice","Commercial","Assistante"];
+const ROLES = ["Directeur","Agent","Agente","NÃ©gociateur","NÃ©gociatrice","Commercial","Assistante"];
 const STAGES = [
   { id:"nouveau", label:"Nouveau", color:"#64748b" },
-  { id:"qualification", label:"Qualifié", color:"#c8820a" },
+  { id:"qualification", label:"QualifiÃ©", color:"#c8820a" },
   { id:"recherche", label:"En recherche", color:"#2563eb" },
   { id:"visite", label:"Visites", color:"#7c3aed" },
   { id:"offre", label:"Offre", color:"#db2777" },
@@ -25,7 +36,7 @@ const STAGES = [
 const DPE_ORDER = ["A","B","C","D","E","F","G"];
 const AGENT_COLORS = ["#0a3d62","#1a6b9e","#0d7a8a","#7c3aed","#db2777","#c8820a","#0d9e6e","#c0392b","#6366f1","#0d9488"];
 
-// ── STORAGE ───────────────────────────────────────────────────────────────────
+// ââ STORAGE âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const SK = { agents:"cal_v7_agents", acq:"cal_v7_acq", biens:"cal_v7_biens", notifs:"cal_v7_notifs", session:"cal_v7_session" };
 const load = (k, fb) => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : fb; } catch { return fb; } };
 const save = (k, d) => { try { localStorage.setItem(k, JSON.stringify(d)); } catch {} };
@@ -37,7 +48,7 @@ const DEFAULT_AGENTS = [
 const getInitiale = n => (n||"?").charAt(0).toUpperCase();
 const getColor = i => AGENT_COLORS[i % AGENT_COLORS.length];
 
-// ── IMPORT PDF ────────────────────────────────────────────────────────────────
+// ââ IMPORT PDF ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function importerPDF(file) {
   const base64 = await new Promise((res, rej) => {
     const r = new FileReader();
@@ -45,8 +56,8 @@ async function importerPDF(file) {
     r.onerror = rej;
     r.readAsDataURL(file);
   });
-  const prompt = `Extrais TOUTES les informations de cette fiche immobilière IAD ou autre agence.
-Réponds UNIQUEMENT en JSON valide sans backticks:
+  const prompt = `Extrais TOUTES les informations de cette fiche immobiliÃ¨re IAD ou autre agence.
+RÃ©ponds UNIQUEMENT en JSON valide sans backticks:
 {
   "type":"Appartement"|"Maison"|"Studio"|"Terrain",
   "prix":number|null,
@@ -57,7 +68,7 @@ Réponds UNIQUEMENT en JSON valide sans backticks:
   "salles_de_bain":number|null,
   "etage":number|null,
   "niveaux":number|null,
-  "adresse":"adresse complète avec ville et CP"|null,
+  "adresse":"adresse complÃ¨te avec ville et CP"|null,
   "ville":"ville"|null,
   "code_postal":"CP"|null,
   "caracteristiques":["piscine","jardin","terrasse","garage","parking","cave","balcon","dressing","buanderie","bureau","panneaux_solaires","portail","videophone","plancher_chauffant","climatisation","cheminee","cuisine_equipee","fibre_optique"],
@@ -69,10 +80,10 @@ Réponds UNIQUEMENT en JSON valide sans backticks:
   "agent":"nom agent"|null,
   "exposition":"Sud"|"Nord"|"Est"|"Ouest"|"Sud-Est"|"Sud-Ouest"|null,
   "chauffage":"Individuel"|"Collectif"|null,
-  "description":"description complète 4-5 phrases",
+  "description":"description complÃ¨te 4-5 phrases",
   "titre":"titre court",
   "source":"IAD"|"autre",
-  "detail_pieces":[{"nom":"nom pièce","surface":number|null,"niveau":number|null,"equipements":["string"]}],
+  "detail_pieces":[{"nom":"nom piÃ¨ce","surface":number|null,"niveau":number|null,"equipements":["string"]}],
   "surfaces_annexes":[{"nom":"string","surface":number|null}]
 }`;
   try {
@@ -90,7 +101,7 @@ Réponds UNIQUEMENT en JSON valide sans backticks:
   } catch { return {}; }
 }
 
-// ── IMPORT PAR URL ────────────────────────────────────────────────────────────
+// ââ IMPORT PAR URL ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function importerAnnonce(url) {
   let contenu = `URL de l'annonce: ${url}`;
   try {
@@ -105,9 +116,9 @@ async function importerAnnonce(url) {
       .substring(0, 5000) || contenu;
   } catch { /* utilise l'URL brute */ }
 
-  const prompt = `Extrais les caractéristiques de ce bien immobilier depuis cette annonce.
+  const prompt = `Extrais les caractÃ©ristiques de ce bien immobilier depuis cette annonce.
 Contenu: "${contenu}"
-Réponds UNIQUEMENT en JSON valide sans backticks:
+RÃ©ponds UNIQUEMENT en JSON valide sans backticks:
 {
   "type":"Appartement"|"Maison"|"Studio"|"Terrain",
   "prix":number|null,
@@ -117,7 +128,7 @@ Réponds UNIQUEMENT en JSON valide sans backticks:
   "chambres":number|null,
   "salles_de_bain":number|null,
   "etage":number|null,
-  "adresse":"adresse complète"|null,
+  "adresse":"adresse complÃ¨te"|null,
   "ville":"ville"|null,
   "code_postal":"CP"|null,
   "caracteristiques":["piscine","jardin","terrasse","garage","parking","cave","balcon","dressing","buanderie","bureau","plancher_chauffant","cuisine_equipee"],
@@ -140,11 +151,11 @@ Réponds UNIQUEMENT en JSON valide sans backticks:
   } catch { return {}; }
 }
 
-// ── IA ACQUÉREUR ──────────────────────────────────────────────────────────────
+// ââ IA ACQUÃREUR ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function analyserCriteresAcquereur(note) {
-  const prompt = `Extrais les critères de recherche d'un acquéreur immobilier.
+  const prompt = `Extrais les critÃ¨res de recherche d'un acquÃ©reur immobilier.
 Note: "${note}"
-Réponds UNIQUEMENT en JSON sans backticks:
+RÃ©ponds UNIQUEMENT en JSON sans backticks:
 {
   "budget_max":number|null,
   "budget_min":number|null,
@@ -156,7 +167,7 @@ Réponds UNIQUEMENT en JSON sans backticks:
   "villes":["ville ou CP"],
   "exigences":["piscine","jardin","terrasse","garage","parking","cave","balcon","dressing","bureau","cuisine_equipee","plancher_chauffant","panneaux_solaires"],
   "exclusions":["RDC","travaux"],
-  "criteres_pieces":[{"nom":"nom de la pièce cherchée","surface_min":number|null,"surface_max":number|null}],
+  "criteres_pieces":[{"nom":"nom de la piÃ¨ce cherchÃ©e","surface_min":number|null,"surface_max":number|null}],
   "dpe_max":"A"|"B"|"C"|"D"|"E"|"F"|"G"|null,
   "annee_construction_min":number|null,
   "resume":"1 phrase courte"
@@ -173,53 +184,53 @@ Réponds UNIQUEMENT en JSON sans backticks:
   } catch { return {}; }
 }
 
-// ── MATCHING BIDIRECTIONNEL ───────────────────────────────────────────────────
+// ââ MATCHING BIDIRECTIONNEL âââââââââââââââââââââââââââââââââââââââââââââââââââ
 function calculerScore(bien, criteres) {
   const c = criteres || {}; let score = 0; const ok = []; const ko = []; const pieceMatches = [];
 
   // Type (20pts)
-  if (c.type && bien.type === c.type) { score += 20; ok.push(`Type ${bien.type} ✓`); }
-  else if (c.type) ko.push(`Type souhaité: ${c.type}`);
+  if (c.type && bien.type === c.type) { score += 20; ok.push(`Type ${bien.type} â`); }
+  else if (c.type) ko.push(`Type souhaitÃ©: ${c.type}`);
 
   // Prix (20pts)
-  if (c.budget_max && bien.prix <= c.budget_max) { score += 20; ok.push(`Prix ${(bien.prix/1000).toFixed(0)}k€ ✓`); }
-  else if (c.budget_max) ko.push(`Prix ${(bien.prix/1000).toFixed(0)}k€ > budget`);
+  if (c.budget_max && bien.prix <= c.budget_max) { score += 20; ok.push(`Prix ${(bien.prix/1000).toFixed(0)}kâ¬ â`); }
+  else if (c.budget_max) ko.push(`Prix ${(bien.prix/1000).toFixed(0)}kâ¬ > budget`);
 
   // Surface habitable (10pts)
-  if (c.surface_min && bien.surface >= c.surface_min) { score += 10; ok.push(`${bien.surface}m² ≥ ${c.surface_min}m² ✓`); }
-  else if (c.surface_min) ko.push(`Surface ${bien.surface||0}m² < ${c.surface_min}m²`);
+  if (c.surface_min && bien.surface >= c.surface_min) { score += 10; ok.push(`${bien.surface}mÂ² â¥ ${c.surface_min}mÂ² â`); }
+  else if (c.surface_min) ko.push(`Surface ${bien.surface||0}mÂ² < ${c.surface_min}mÂ²`);
 
   // Surface terrain (5pts)
   if (c.surface_terrain_min) {
-    if (bien.surface_terrain >= c.surface_terrain_min) { score += 5; ok.push(`Terrain ${bien.surface_terrain}m² ✓`); }
-    else ko.push(`Terrain ${bien.surface_terrain||0}m² < ${c.surface_terrain_min}m²`);
+    if (bien.surface_terrain >= c.surface_terrain_min) { score += 5; ok.push(`Terrain ${bien.surface_terrain}mÂ² â`); }
+    else ko.push(`Terrain ${bien.surface_terrain||0}mÂ² < ${c.surface_terrain_min}mÂ²`);
   }
 
-  // Pièces (8pts)
-  if (c.pieces_min && bien.pieces >= c.pieces_min) { score += 8; ok.push(`${bien.pieces}p ≥ ${c.pieces_min}p ✓`); }
+  // PiÃ¨ces (8pts)
+  if (c.pieces_min && bien.pieces >= c.pieces_min) { score += 8; ok.push(`${bien.pieces}p â¥ ${c.pieces_min}p â`); }
   else if (c.pieces_min) ko.push(`${bien.pieces||0}p < ${c.pieces_min}p min`);
 
   // Chambres (5pts)
-  if (c.chambres_min && bien.chambres >= c.chambres_min) { score += 5; ok.push(`${bien.chambres} ch. ✓`); }
+  if (c.chambres_min && bien.chambres >= c.chambres_min) { score += 5; ok.push(`${bien.chambres} ch. â`); }
   else if (c.chambres_min) ko.push(`${bien.chambres||0} ch. < ${c.chambres_min} min`);
 
-  // Équipements (3pts chacun)
+  // Ãquipements (3pts chacun)
   const caract = [...(bien.caracteristiques||[]),
     bien.piscine&&"piscine", bien.jardin&&"jardin", bien.terrasse&&"terrasse",
     bien.garage&&"garage", bien.parking&&"parking"
   ].filter(Boolean);
   (c.exigences||[]).forEach(ex => {
-    if (caract.some(x => x?.toLowerCase().includes(ex.toLowerCase()))) { score += 3; ok.push(`${ex} ✓`); }
+    if (caract.some(x => x?.toLowerCase().includes(ex.toLowerCase()))) { score += 3; ok.push(`${ex} â`); }
     else ko.push(`${ex} absent`);
   });
 
   // Exclusions
-  if (c.exclusions?.includes("RDC") && bien.etage > 0) { score += 2; ok.push("Pas RDC ✓"); }
-  if (c.exclusions?.includes("travaux") && bien.annee_construction >= 2000) { score += 2; ok.push("Récent ✓"); }
+  if (c.exclusions?.includes("RDC") && bien.etage > 0) { score += 2; ok.push("Pas RDC â"); }
+  if (c.exclusions?.includes("travaux") && bien.annee_construction >= 2000) { score += 2; ok.push("RÃ©cent â"); }
 
   // DPE (3pts)
   if (c.dpe_max && bien.dpe && DPE_ORDER.indexOf(bien.dpe) <= DPE_ORDER.indexOf(c.dpe_max)) {
-    score += 3; ok.push(`DPE ${bien.dpe} ✓`);
+    score += 3; ok.push(`DPE ${bien.dpe} â`);
   }
 
   // Secteur (10pts)
@@ -228,18 +239,18 @@ function calculerScore(bien, criteres) {
     bien.ville?.toLowerCase().includes(v.toLowerCase()) ||
     bien.code_postal?.includes(v)
   );
-  if (vm) { score += 10; ok.push("Secteur ✓"); }
+  if (vm) { score += 10; ok.push("Secteur â"); }
   else if ((c.villes||[]).length) ko.push(`Secteur: ${c.villes.join(", ")}`);
 
-  // MATCHING PAR PIÈCE (8pts chacune)
+  // MATCHING PAR PIÃCE (8pts chacune)
   if (c.criteres_pieces?.length && bien.detail_pieces?.length) {
     c.criteres_pieces.forEach(cp => {
       if (!cp.nom) return;
       const nomC = cp.nom.toLowerCase();
       const piecesBien = bien.detail_pieces.filter(p => {
         const nomP = p.nom?.toLowerCase()||"";
-        if (nomC.includes("salon")||nomC.includes("pièce de vie")||nomC.includes("séjour")||nomC.includes("salle à manger")||nomC.includes("living"))
-          return nomP.includes("salon")||nomP.includes("séjour")||nomP.includes("salle à manger")||nomP.includes("pièce de vie")||nomP.includes("living");
+        if (nomC.includes("salon")||nomC.includes("piÃ¨ce de vie")||nomC.includes("sÃ©jour")||nomC.includes("salle Ã  manger")||nomC.includes("living"))
+          return nomP.includes("salon")||nomP.includes("sÃ©jour")||nomP.includes("salle Ã  manger")||nomP.includes("piÃ¨ce de vie")||nomP.includes("living");
         if (nomC.includes("chambre")) return nomP.includes("chambre");
         if (nomC.includes("cuisine")) return nomP.includes("cuisine");
         if (nomC.includes("bureau")) return nomP.includes("bureau");
@@ -248,19 +259,19 @@ function calculerScore(bien, criteres) {
         if (nomC.includes("terrasse")) return nomP.includes("terrasse");
         return nomP.includes(nomC);
       });
-      if (!piecesBien.length) { ko.push(`${cp.nom}: non présent`); return; }
+      if (!piecesBien.length) { ko.push(`${cp.nom}: non prÃ©sent`); return; }
       const pieceOk = piecesBien.find(p => {
         if (!p.surface) return true;
         return (!cp.surface_min||p.surface>=cp.surface_min) && (!cp.surface_max||p.surface<=cp.surface_max);
       });
       if (pieceOk) {
         score += 8;
-        const range = cp.surface_min&&cp.surface_max?`${cp.surface_min}-${cp.surface_max}m²`:cp.surface_min?`≥${cp.surface_min}m²`:cp.surface_max?`≤${cp.surface_max}m²`:"";
-        ok.push(cp.nom+(pieceOk.surface?' '+pieceOk.surface+'m²':'')+' '+(range?'→'+range:'')+' ✓');
+        const range = cp.surface_min&&cp.surface_max?`${cp.surface_min}-${cp.surface_max}mÂ²`:cp.surface_min?`â¥${cp.surface_min}mÂ²`:cp.surface_max?`â¤${cp.surface_max}mÂ²`:"";
+        ok.push(cp.nom+(pieceOk.surface?' '+pieceOk.surface+'mÂ²':'')+' '+(range?'â'+range:'')+' â');
         pieceMatches.push({ nom:cp.nom, surface:pieceOk.surface, ok:true, range });
       } else {
         const best = piecesBien[0];
-        ko.push(`${cp.nom} ${best.surface||"?"}m² hors critères`);
+        ko.push(`${cp.nom} ${best.surface||"?"}mÂ² hors critÃ¨res`);
         pieceMatches.push({ nom:cp.nom, surface:best.surface, ok:false });
       }
     });
@@ -279,7 +290,7 @@ function matcherAcquereursPourBien(bien, acquereurs) {
     .filter(a => a.score >= 25).sort((a,b) => b.score - a.score);
 }
 
-// ── PHOTO PICKER ──────────────────────────────────────────────────────────────
+// ââ PHOTO PICKER ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function PhotoPicker({ current, onPhoto, size=80, label="" }) {
   const ref = useRef(null);
   return (
@@ -290,8 +301,8 @@ function PhotoPicker({ current, onPhoto, size=80, label="" }) {
         border:`3px solid ${C.goldLight}`, boxShadow:`0 4px 20px rgba(10,61,98,0.25)`,
         display:"flex", alignItems:"center", justifyContent:"center", position:"relative",
       }}>
-        {current ? <img src={current} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : <span style={{fontSize:size*0.35}}>📷</span>}
-        <div style={{position:"absolute",bottom:0,right:0,width:22,height:22,borderRadius:"50%",background:C.gold,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>✏️</div>
+        {current ? <img src={current} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : <span style={{fontSize:size*0.35}}>ð·</span>}
+        <div style={{position:"absolute",bottom:0,right:0,width:22,height:22,borderRadius:"50%",background:C.gold,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>âï¸</div>
       </div>
       {label&&<span style={{fontSize:11,color:C.textMuted}}>{label}</span>}
       <input ref={ref} type="file" accept="image/*" capture="environment" onChange={e=>{
@@ -317,51 +328,62 @@ function Avatar({ photo, initiale, color, size=40, border=false }) {
   );
 }
 
-// ── APP ───────────────────────────────────────────────────────────────────────
+// ââ APP âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export default function App() {
-  const [agents, setAgents] = useState(()=>load(SK.agents, DEFAULT_AGENTS));
-  const [acquereurs, setAcquereurs] = useState(()=>load(SK.acq, []));
-  const [biens, setBiens] = useState(()=>load(SK.biens, []));
-  const [notifs, setNotifs] = useState(()=>load(SK.notifs, []));
-  const [session, setSession] = useState(()=>load(SK.session, null));
+  const [agents, setAgents] = useState(DEFAULT_AGENTS);
+  const [acquereurs, setAcquereurs] = useState([]);
+  const [biens, setBiens] = useState([]);
+  const [notifs, setNotifs] = useState([]);
+  const [sessionId, setSessionId] = useState(()=>getLS());
   const [authScreen, setAuthScreen] = useState("login");
+  const [appLoading, setAppLoading] = useState(true);
 
-  useEffect(()=>save(SK.agents,agents),[agents]);
-  useEffect(()=>save(SK.acq,acquereurs),[acquereurs]);
-  useEffect(()=>save(SK.biens,biens),[biens]);
-  useEffect(()=>save(SK.notifs,notifs),[notifs]);
-  useEffect(()=>save(SK.session,session),[session]);
+  useEffect(() => {
+    const load = async () => {
+      const [ag,acq,bi,no] = await Promise.all([db.get("agents"),db.get("acquereurs"),db.get("biens"),db.get("notifications")]);
+      if(ag?.length) setAgents(ag.map(a=>({...a,agentId:a.agent_id,dateInscription:a.date_inscription,biens_visites:a.biens_visites||[],criteres:a.criteres||{}})));
+      if(acq?.length) setAcquereurs(acq.map(a=>({...a,agentId:a.agent_id,biens_visites:a.biens_visites||[],criteres:a.criteres||{}})));
+      if(bi?.length) setBiens(bi.map(b=>({...b,agentId:b.agent_id,caracteristiques:b.caracteristiques||[],detail_pieces:b.detail_pieces||[],surfaces_annexes:b.surfaces_annexes||[]})));
+      if(no?.length) setNotifs(no.map(n=>({...n,toAgentId:n.to_agent_id,fromAgentId:n.from_agent_id})));
+      setAppLoading(false);
+    };
+    load();
+    const timer = setInterval(load, 8000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const agentCo = session ? agents.find(a=>a.id===session) : null;
+  const agentCo = sessionId ? agents.find(a=>a.id===sessionId) : null;
   const enAttente = agents.filter(a=>a.statut==="en_attente");
 
-  const inscrire = data => {
+  const inscrire = async data => {
     const na={...data,id:Date.now().toString(),color:getColor(agents.length),avatar:getInitiale(data.nom),statut:"en_attente",photo:null,dateInscription:new Date().toISOString().split("T")[0]};
+    await db.upsert('agents',{id:na.id,nom:na.nom,prenom:na.prenom||'',role:na.role,color:na.color,avatar:na.avatar,statut:na.statut,photo:null,date_inscription:na.dateInscription});
     setAgents(l=>[...l,na]);
     const dirId=agents.find(a=>a.role==="Directeur")?.id||"romain";
-    setNotifs(ns=>[{id:Date.now(),type:"inscription",toAgentId:dirId,fromAgentId:na.id,msg:`🆕 ${na.nom} ${na.prenom} (${na.role}) demande à rejoindre l'agence`,lu:false,date:new Date().toLocaleString("fr-FR")},...ns]);
-    setSession(na.id); setAuthScreen("pending");
+    setNotifs(ns=>[{id:Date.now(),type:"inscription",toAgentId:dirId,fromAgentId:na.id,msg:`ð ${na.nom} ${na.prenom} (${na.role}) demande Ã  rejoindre l'agence`,lu:false,date:new Date().toLocaleString("fr-FR")},...ns]);
+    setLS(na.id); setSessionId(na.id); setAuthScreen("pending");
   };
-  const approuver = id => { setAgents(l=>l.map(a=>a.id===id?{...a,statut:"approuve"}:a)); setNotifs(ns=>[{id:Date.now(),type:"approuve",toAgentId:id,msg:"✅ Votre compte a été approuvé ! Bienvenue dans l'équipe Calibre.",lu:false,date:new Date().toLocaleString("fr-FR")},...ns]); };
-  const refuser = id => setAgents(l=>l.map(a=>a.id===id?{...a,statut:"refuse"}:a));
-  const sendNotif = (from,toId,msg) => setNotifs(ns=>[{id:Date.now(),fromAgentId:from.id,toAgentId:toId,msg,lu:false,date:new Date().toLocaleString("fr-FR")},...ns]);
-  const updateAgent = u => setAgents(l=>l.map(a=>a.id===u.id?u:a));
+  const approuver = id => { setAgents(l=>l.map(a=>a.id===id?{...a,statut:"approuve"}:a)); setNotifs(ns=>[{id:Date.now(),type:"approuve",toAgentId:id,msg:"â Votre compte a Ã©tÃ© approuvÃ© ! Bienvenue dans l'Ã©quipe Calibre.",lu:false,date:new Date().toLocaleString("fr-FR")},...ns]); };
+  const refuser = async id => {await db.upsert('agents',{id,statut:'refuse'});setAgents(l=>l.map(a=>a.id===id?{...a,statut:'refuse'}:a));};
+  const sendNotif = async (from,toId,msg) => {const n={id:Date.now().toString(),type:'message',to_agent_id:toId,from_agent_id:from.id,msg,lu:false,date:new Date().toLocaleString('fr-FR')};await db.upsert('notifications',n);setNotifs(ns=>[{...n,toAgentId:toId,fromAgentId:from.id},...ns]);};
+  const updateAgent = async u => {await db.upsert('agents',{id:u.id,nom:u.nom,prenom:u.prenom||'',role:u.role,color:u.color,avatar:u.avatar,statut:u.statut,photo:u.photo,date_inscription:u.dateInscription});setAgents(l=>l.map(a=>a.id===u.id?u:a));}
 
+  if(appLoading) return (<div style={S.shell}><div style={S.phone}><div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'linear-gradient(160deg,#0a3d62,#0d7a8a)'}}><div style={{fontSize:56}}>🏠</div><div style={{fontSize:24,fontWeight:900,color:'#fff',marginTop:8}}>Calibre</div><div style={{fontSize:13,color:'rgba(255,255,255,0.5)',fontStyle:'italic',marginTop:4}}>Synchronisation...</div></div></div></div>);
   if (!agentCo) {
     if (authScreen==="signup") return <SignupScreen onBack={()=>setAuthScreen("login")} onInscrire={inscrire}/>;
     if (authScreen==="pending") {
       const me=session?agents.find(a=>a.id===session):null;
-      if (me?.statut!=="approuve") return <PendingScreen nom={me?.nom} onLogout={()=>{setSession(null);setAuthScreen("login");}}/>;
+      if (me?.statut!=="approuve") return <PendingScreen nom={me?.nom} onLogout={()=>{setLS(null); setSessionId(null);setAuthScreen("login");}}/>;
     }
-    return <LoginScreen agents={agents.filter(a=>a.statut==="approuve")} onLogin={id=>setSession(id)} onSignup={()=>setAuthScreen("signup")}/>;
+    return <LoginScreen agents={agents.filter(a=>a.statut==="approuve")} onLogin={id=>setLS(id); setSessionId(id)} onSignup={()=>setAuthScreen("signup")}/>;
   }
-  if (agentCo.statut==="en_attente") return <PendingScreen nom={agentCo.nom} onLogout={()=>{setSession(null);setAuthScreen("login");}}/>;
-  if (agentCo.statut==="refuse") return <div style={S.shell}><div style={S.phone}><div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,textAlign:"center"}}><div style={{fontSize:56,marginBottom:16}}>❌</div><div style={{fontSize:20,fontWeight:900,color:C.danger}}>Accès refusé</div><button onClick={()=>{setSession(null);setAuthScreen("login");}} style={{...S.primaryBtn,marginTop:24}}>Retour</button></div></div></div>;
+  if (agentCo.statut==="en_attente") return <PendingScreen nom={agentCo.nom} onLogout={()=>{setLS(null); setSessionId(null);setAuthScreen("login");}}/>;
+  if (agentCo.statut==="refuse") return <div style={S.shell}><div style={S.phone}><div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,textAlign:"center"}}><div style={{fontSize:56,marginBottom:16}}>â</div><div style={{fontSize:20,fontWeight:900,color:C.danger}}>AccÃ¨s refusÃ©</div><button onClick={()=>{setLS(null); setSessionId(null);setAuthScreen("login");}} style={{...S.primaryBtn,marginTop:24}}>Retour</button></div></div></div>;
 
-  return <CRMApp agent={agentCo} agents={agents.filter(a=>a.statut==="approuve")} acquereurs={acquereurs} setAcquereurs={setAcquereurs} biens={biens} setBiens={setBiens} notifs={notifs} setNotifs={setNotifs} enAttente={enAttente} onApprouver={approuver} onRefuser={refuser} onLogout={()=>{setSession(null);setAuthScreen("login");}} onNotif={sendNotif} onUpdateAgent={updateAgent}/>;
+  return <CRMApp agent={agentCo} agents={agents.filter(a=>a.statut==="approuve")} acquereurs={acquereurs} setAcquereurs={setAcquereurs} biens={biens} setBiens={setBiens} notifs={notifs} setNotifs={setNotifs} enAttente={enAttente} onApprouver={approuver} onRefuser={refuser} onLogout={()=>{setLS(null); setSessionId(null);setAuthScreen("login");}} onNotif={sendNotif} onUpdateAgent={updateAgent}/>;
 }
 
-// ── LOGIN ─────────────────────────────────────────────────────────────────────
+// ââ LOGIN âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function LoginScreen({ agents, onLogin, onSignup }) {
   return (
     <div style={S.shell}><div style={S.phone}>
@@ -370,23 +392,23 @@ function LoginScreen({ agents, onLogin, onSignup }) {
         <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,rgba(5,25,50,0.55) 0%,rgba(10,61,98,0.8) 50%,rgba(5,20,40,0.95) 100%)"}}/>
       </div>
       <div style={{position:"relative",zIndex:1,flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"32px 28px"}}>
-        <div style={{fontSize:60,filter:"drop-shadow(0 4px 20px rgba(0,0,0,0.4))"}}>🏠</div>
+        <div style={{fontSize:60,filter:"drop-shadow(0 4px 20px rgba(0,0,0,0.4))"}}>ð </div>
         <div style={{fontSize:36,fontWeight:900,color:"#fff",letterSpacing:"-0.03em",textShadow:"0 2px 20px rgba(0,0,0,0.5)",marginTop:6}}>Calibre</div>
         <div style={{fontSize:13,color:"rgba(255,255,255,0.55)",fontStyle:"italic",marginBottom:36,letterSpacing:"0.05em"}}>Toit toit mon toit</div>
         <div style={{width:"100%",background:"rgba(255,255,255,0.12)",backdropFilter:"blur(20px)",borderRadius:24,border:"1px solid rgba(255,255,255,0.25)",padding:20,boxShadow:"0 8px 32px rgba(0,0,0,0.3)"}}>
           <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",textAlign:"center",marginBottom:14}}>Choisir mon profil</div>
-          {agents.length===0?<button onClick={onSignup} style={S.glassBtn}>Créer le premier compte</button>:<>
+          {agents.length===0?<button onClick={onSignup} style={S.glassBtn}>CrÃ©er le premier compte</button>:<>
             {agents.map(a=>(
               <button key={a.id} onClick={()=>onLogin(a.id)} style={S.agentLoginBtn}>
                 <Avatar photo={a.photo} initiale={a.avatar} color={a.color} size={42} border/>
                 <div style={{flex:1,textAlign:"left"}}><div style={{fontWeight:700,color:"#fff",fontSize:15}}>{a.nom} {a.prenom}</div><div style={{fontSize:12,color:"rgba(255,255,255,0.55)"}}>{a.role}</div></div>
-                <span style={{color:C.goldLight,fontSize:18}}>›</span>
+                <span style={{color:C.goldLight,fontSize:18}}>âº</span>
               </button>
             ))}
-            <button onClick={onSignup} style={{...S.glassBtn,marginTop:10}}>+ Créer un compte</button>
+            <button onClick={onSignup} style={{...S.glassBtn,marginTop:10}}>+ CrÃ©er un compte</button>
           </>}
         </div>
-        <div style={{marginTop:16,fontSize:11,color:"rgba(255,255,255,0.25)",letterSpacing:"0.06em"}}>Lac de Saint-Cassien • Var</div>
+        <div style={{marginTop:16,fontSize:11,color:"rgba(255,255,255,0.25)",letterSpacing:"0.06em"}}>Lac de Saint-Cassien â¢ Var</div>
       </div>
     </div></div>
   );
@@ -396,7 +418,7 @@ function SignupScreen({ onBack, onInscrire }) {
   const [nom,setNom]=useState(""); const [prenom,setPrenom]=useState(""); const [role,setRole]=useState("Agent");
   const [code,setCode]=useState(""); const [err,setErr]=useState("");
   const soumettre = () => {
-    if (!nom.trim()||!prenom.trim()) { setErr("Renseignez votre nom et prénom."); return; }
+    if (!nom.trim()||!prenom.trim()) { setErr("Renseignez votre nom et prÃ©nom."); return; }
     if (code.trim().toUpperCase()!==CODE_AGENCE) { setErr("Code agence incorrect."); return; }
     onInscrire({nom:nom.trim(),prenom:prenom.trim(),role});
   };
@@ -408,18 +430,18 @@ function SignupScreen({ onBack, onInscrire }) {
       </div>
       <div style={{position:"relative",zIndex:1,flex:1,overflowY:"auto"}}>
         <div style={{padding:"52px 20px 16px",display:"flex",alignItems:"center",gap:12}}>
-          <button onClick={onBack} style={S.glassBackBtn}>←</button>
-          <div><div style={{fontSize:20,fontWeight:900,color:"#fff"}}>Créer mon compte</div><div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Agence Calibre</div></div>
+          <button onClick={onBack} style={S.glassBackBtn}>â</button>
+          <div><div style={{fontSize:20,fontWeight:900,color:"#fff"}}>CrÃ©er mon compte</div><div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Agence Calibre</div></div>
         </div>
         <div style={{padding:"0 20px 32px"}}>
           <div style={{background:"rgba(255,255,255,0.1)",backdropFilter:"blur(16px)",borderRadius:20,border:"1px solid rgba(255,255,255,0.2)",padding:20,marginBottom:16}}>
             <GlassInput label="Nom *" val={nom} set={setNom} ph="Dupont"/>
-            <GlassInput label="Prénom *" val={prenom} set={setPrenom} ph="Sophie"/>
-            <div style={{marginBottom:12}}><label style={S.glassLabel}>Rôle</label><select value={role} onChange={e=>setRole(e.target.value)} style={S.glassSelect}>{ROLES.map(r=><option key={r}>{r}</option>)}</select></div>
-            <GlassInput label="Code agence *" val={code} set={setCode} ph="Demandez à votre directeur" type="password"/>
-            {err&&<div style={{background:"rgba(192,57,43,0.2)",border:"1px solid rgba(192,57,43,0.4)",borderRadius:10,padding:"8px 12px",fontSize:12,color:"#ff8a7a",marginTop:4}}>⚠️ {err}</div>}
+            <GlassInput label="PrÃ©nom *" val={prenom} set={setPrenom} ph="Sophie"/>
+            <div style={{marginBottom:12}}><label style={S.glassLabel}>RÃ´le</label><select value={role} onChange={e=>setRole(e.target.value)} style={S.glassSelect}>{ROLES.map(r=><option key={r}>{r}</option>)}</select></div>
+            <GlassInput label="Code agence *" val={code} set={setCode} ph="Demandez Ã  votre directeur" type="password"/>
+            {err&&<div style={{background:"rgba(192,57,43,0.2)",border:"1px solid rgba(192,57,43,0.4)",borderRadius:10,padding:"8px 12px",fontSize:12,color:"#ff8a7a",marginTop:4}}>â ï¸ {err}</div>}
           </div>
-          <button onClick={soumettre} disabled={!nom||!prenom||!code} style={{...S.primaryGlassBtn,opacity:!nom||!prenom||!code?0.5:1}}>Envoyer ma demande →</button>
+          <button onClick={soumettre} disabled={!nom||!prenom||!code} style={{...S.primaryGlassBtn,opacity:!nom||!prenom||!code?0.5:1}}>Envoyer ma demande â</button>
         </div>
       </div>
     </div></div>
@@ -434,16 +456,16 @@ function PendingScreen({ nom, onLogout }) {
         <div style={{position:"absolute",inset:0,background:"rgba(5,20,40,0.85)"}}/>
       </div>
       <div style={{position:"relative",zIndex:1,flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,textAlign:"center"}}>
-        <div style={{fontSize:56,marginBottom:16}}>⏳</div>
-        <div style={{fontSize:22,fontWeight:900,color:"#fff",marginBottom:8}}>Demande envoyée !</div>
+        <div style={{fontSize:56,marginBottom:16}}>â³</div>
+        <div style={{fontSize:22,fontWeight:900,color:"#fff",marginBottom:8}}>Demande envoyÃ©e !</div>
         <div style={{fontSize:14,color:"rgba(255,255,255,0.6)",lineHeight:1.7,marginBottom:28}}>Bonjour {nom} !<br/>Votre directeur va valider votre compte.</div>
-        <button onClick={onLogout} style={{...S.glassBtn,width:"auto",padding:"10px 24px"}}>Retour à l'accueil</button>
+        <button onClick={onLogout} style={{...S.glassBtn,width:"auto",padding:"10px 24px"}}>Retour Ã  l'accueil</button>
       </div>
     </div></div>
   );
 }
 
-// ── CRM ───────────────────────────────────────────────────────────────────────
+// ââ CRM âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function CRMApp({ agent, agents, acquereurs, setAcquereurs, biens, setBiens, notifs, setNotifs, enAttente, onApprouver, onRefuser, onLogout, onNotif, onUpdateAgent }) {
   const [nav, setNav] = useState("acquereurs");
   const [stack, setStack] = useState([{screen:"list"}]);
@@ -470,14 +492,14 @@ function CRMApp({ agent, agents, acquereurs, setAcquereurs, biens, setBiens, not
         {/* TOP BAR */}
         <div style={{padding:"18px 18px 12px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:26,filter:"drop-shadow(0 2px 8px rgba(0,0,0,0.35))"}}>🏠</span>
+            <span style={{fontSize:26,filter:"drop-shadow(0 2px 8px rgba(0,0,0,0.35))"}}>ð </span>
             <div>
               <div style={{fontSize:20,fontWeight:900,color:"#fff",letterSpacing:"-0.02em",textShadow:"0 2px 10px rgba(0,0,0,0.4)"}}>Calibre</div>
               <div style={{fontSize:9,color:"rgba(255,255,255,0.5)",fontStyle:"italic"}}>Toit toit mon toit</div>
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            {totalBadge>0&&<button onClick={()=>{setNav("notifs");setStack([{screen:"list"}]);}} style={{background:"rgba(255,255,255,0.2)",backdropFilter:"blur(10px)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:20,padding:"5px 10px",color:"#fff",fontSize:13,cursor:"pointer",position:"relative"}}>🔔<span style={{position:"absolute",top:-3,right:-3,background:C.danger,color:"#fff",borderRadius:"50%",width:16,height:16,fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>{totalBadge}</span></button>}
+            {totalBadge>0&&<button onClick={()=>{setNav("notifs");setStack([{screen:"list"}]);}} style={{background:"rgba(255,255,255,0.2)",backdropFilter:"blur(10px)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:20,padding:"5px 10px",color:"#fff",fontSize:13,cursor:"pointer",position:"relative"}}>ð<span style={{position:"absolute",top:-3,right:-3,background:C.danger,color:"#fff",borderRadius:"50%",width:16,height:16,fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>{totalBadge}</span></button>}
             <div onClick={onLogout} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.18)",backdropFilter:"blur(10px)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:24,padding:"4px 10px 4px 4px",cursor:"pointer"}}>
               <Avatar photo={agent.photo} initiale={agent.avatar} color={agent.color} size={28} border/>
               <span style={{fontSize:12,fontWeight:700,color:"#fff"}}>{agent.nom}</span>
@@ -487,7 +509,7 @@ function CRMApp({ agent, agents, acquereurs, setAcquereurs, biens, setBiens, not
 
         {/* STATS RAPIDES */}
         <div style={{display:"flex",gap:8,padding:"0 16px 10px"}}>
-          {[[nbAcq,"Acquéreurs","👤",C.teal],[nbBiens,"Biens","🏡",C.gold],[nbMatchTotal,"Matchs","🎯",C.success]].map(([n,lb,ic,col])=>(
+          {[[nbAcq,"AcquÃ©reurs","ð¤",C.teal],[nbBiens,"Biens","ð¡",C.gold],[nbMatchTotal,"Matchs","ð¯",C.success]].map(([n,lb,ic,col])=>(
             <div key={lb} style={{flex:1,background:"rgba(255,255,255,0.85)",backdropFilter:"blur(10px)",borderRadius:12,padding:"8px 6px",textAlign:"center",border:`1px solid ${col}20`}}>
               <div style={{fontSize:9,marginBottom:2}}>{ic}</div>
               <div style={{fontSize:18,fontWeight:900,color:col}}>{n}</div>
@@ -498,7 +520,7 @@ function CRMApp({ agent, agents, acquereurs, setAcquereurs, biens, setBiens, not
 
         {/* NAV */}
         <div style={{display:"flex",background:"rgba(255,255,255,0.9)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${C.borderDark}`,margin:"0 12px",borderRadius:"14px 14px 0 0",overflow:"hidden"}}>
-          {[["acquereurs","👤","Acquéreurs"],["biens","🏡","Biens"],["equipe","👥","Équipe"],["notifs","🔔","Notifs"]].map(([id,ic,lb])=>(
+          {[["acquereurs","ð¤","AcquÃ©reurs"],["biens","ð¡","Biens"],["equipe","ð¥","Ãquipe"],["notifs","ð","Notifs"]].map(([id,ic,lb])=>(
             <button key={id} onClick={()=>{setNav(id);setStack([{screen:"list"}]);}}
               style={{flex:1,background:"none",border:"none",borderBottom:`2px solid ${nav===id?C.teal:"transparent"}`,padding:"10px 0 8px",fontSize:11,fontWeight:700,color:nav===id?C.teal:C.textMuted,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
               <span style={{position:"relative"}}>{ic}{id==="notifs"&&totalBadge>0&&<span style={{position:"absolute",top:-4,right:-5,background:C.danger,color:"#fff",borderRadius:"50%",width:14,height:14,fontSize:8,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>{totalBadge}</span>}</span>
@@ -509,29 +531,29 @@ function CRMApp({ agent, agents, acquereurs, setAcquereurs, biens, setBiens, not
 
         <div style={{flex:1,background:C.bg,margin:"0 12px",borderRadius:"0 0 14px 14px",overflow:"hidden",display:"flex",flexDirection:"column"}}>
           {nav==="acquereurs"&&cur.screen==="list"&&<AcqList acquereurs={acquereurs} biens={biens} agents={agents} agent={agent} onSelect={a=>push({screen:"detail",id:a.id})} onNew={()=>push({screen:"new"})}/>}
-          {nav==="acquereurs"&&cur.screen==="detail"&&<AcqDetail acq={acquereurs.find(a=>a.id===cur.id)} biens={biens} agents={agents} agent={agent} onBack={pop} onUpdate={a=>setAcquereurs(l=>l.map(x=>x.id===a.id?a:x))} onNotif={onNotif}/>}
-          {nav==="acquereurs"&&cur.screen==="new"&&<NewAcq agent={agent} onBack={pop} onSave={a=>{setAcquereurs(l=>[...l,{...a,id:Date.now().toString(),biens_visites:[],alerte:false,date:new Date().toISOString().split("T")[0]}]);pop();}}/>}
+          {nav==="acquereurs"&&cur.screen==="detail"&&<AcqDetail acq={acquereurs.find(a=>a.id===cur.id)} biens={biens} agents={agents} agent={agent} onBack={pop} onUpdate={async a=>{await db.upsert('acquereurs',{id:a.id,agent_id:a.agentId,...a});setAcquereurs(l=>l.map(x=>x.id===a.id?a:x));}} onNotif={onNotif}/>}
+          {nav==="acquereurs"&&cur.screen==="new"&&<NewAcq agent={agent} onBack={pop} onSave={async a=>{const na={...a,id:Date.now().toString(),biens_visites:[],alerte:false,date:new Date().toISOString().split('T')[0]};await db.upsert('acquereurs',{id:na.id,agent_id:na.agentId,...na});setAcquereurs(l=>[...l,na]);pop();}}/>}
           {nav==="biens"&&cur.screen==="list"&&<BienList biens={biens} acquereurs={acquereurs} agents={agents} agent={agent} onSelect={b=>push({screen:"detail",id:b.id})} onNew={()=>push({screen:"new"})}/>}
           {nav==="biens"&&cur.screen==="detail"&&<BienDetail bien={biens.find(b=>b.id===cur.id)} acquereurs={acquereurs} agents={agents} agent={agent} onBack={pop} onNotif={onNotif}/>}
-          {nav==="biens"&&cur.screen==="new"&&<NewBien agent={agent} onBack={pop} onSave={b=>{setBiens(l=>[...l,{...b,id:Date.now().toString(),date:new Date().toISOString().split("T")[0],statut:"disponible"}]);pop();}}/>}
+          {nav==="biens"&&cur.screen==="new"&&<NewBien agent={agent} onBack={pop} onSave={async b=>{const nb={...b,id:Date.now().toString(),date:new Date().toISOString().split('T')[0],statut:'disponible'};await db.upsert('biens',{id:nb.id,agent_id:nb.agentId,...nb});setBiens(l=>[...l,nb]);pop();}}/>}
           {nav==="equipe"&&<EquipeView agents={agents} acquereurs={acquereurs} biens={biens} agent={agent} enAttente={enAttente} onApprouver={onApprouver} onRefuser={onRefuser} onUpdateAgent={onUpdateAgent}/>}
-          {nav==="notifs"&&<NotifsView notifs={notifs.filter(n=>n.toAgentId===agent.id)} agents={agents} enAttente={isDir?enAttente:[]} onApprouver={onApprouver} onRefuser={onRefuser} onRead={id=>setNotifs(ns=>ns.map(n=>n.id===id?{...n,lu:true}:n))} onReadAll={()=>setNotifs(ns=>ns.map(n=>n.toAgentId===agent.id?{...n,lu:true}:n))}/>}
+          {nav==="notifs"&&<NotifsView notifs={notifs.filter(n=>n.toAgentId===agent.id)} agents={agents} enAttente={isDir?enAttente:[]} onApprouver={onApprouver} onRefuser={onRefuser} onRead={async id=>{await db.upsert('notifications',{id,lu:true});setNotifs(ns=>ns.map(n=>n.id===id?{...n,lu:true}:n));}} onReadAll={async()=>{const mine=notifs.filter(n=>n.toAgentId===agent.id&&!n.lu);for(const n of mine)await db.upsert('notifications',{id:n.id,lu:true});setNotifs(ns=>ns.map(n=>n.toAgentId===agent.id?{...n,lu:true}:n));}}/>}
         </div>
       </div>
     </div></div>
   );
 }
 
-// ── LISTE ACQUÉREURS ──────────────────────────────────────────────────────────
+// ââ LISTE ACQUÃREURS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function AcqList({ acquereurs, biens, agents, agent, onSelect, onNew }) {
   const [search,setSearch]=useState(""); const [filter,setFilter]=useState("tous");
   const filtered=acquereurs.filter(a=>{const q=a.nom.toLowerCase().includes(search.toLowerCase());if(filter==="moi")return q&&a.agentId===agent.id;if(filter==="equipe")return q&&a.agentId!==agent.id;return q;});
   return (
     <div style={S.si}>
-      <div style={S.listTop}><input placeholder="🔍 Rechercher…" value={search} onChange={e=>setSearch(e.target.value)} style={S.searchInput}/><button onClick={onNew} style={S.fab}>+</button></div>
-      <div style={S.filterRow}>{[["tous",`Tous (${acquereurs.length})`],["moi",`Les miens (${acquereurs.filter(a=>a.agentId===agent.id).length})`],["equipe","Équipe"]].map(([id,lb])=>(<button key={id} onClick={()=>setFilter(id)} style={{...S.chip,...(filter===id?S.chipOn:{})}}>{lb}</button>))}</div>
+      <div style={S.listTop}><input placeholder="ð Rechercherâ¦" value={search} onChange={e=>setSearch(e.target.value)} style={S.searchInput}/><button onClick={onNew} style={S.fab}>+</button></div>
+      <div style={S.filterRow}>{[["tous",`Tous (${acquereurs.length})`],["moi",`Les miens (${acquereurs.filter(a=>a.agentId===agent.id).length})`],["equipe","Ãquipe"]].map(([id,lb])=>(<button key={id} onClick={()=>setFilter(id)} style={{...S.chip,...(filter===id?S.chipOn:{})}}>{lb}</button>))}</div>
       <div style={S.scroll}>
-        {filtered.length===0&&<div style={S.empty}>Aucun acquéreur.<br/>Appuyez sur + pour commencer.</div>}
+        {filtered.length===0&&<div style={S.empty}>Aucun acquÃ©reur.<br/>Appuyez sur + pour commencer.</div>}
         {filtered.map(acq=>{
           const st=STAGES.find(x=>x.id===acq.stage)||STAGES[0];
           const ag=agents.find(a=>a.id===acq.agentId);
@@ -541,12 +563,12 @@ function AcqList({ acquereurs, biens, agents, agent, onSelect, onNew }) {
             <div key={acq.id} onClick={()=>onSelect(acq)} style={S.card}>
               <Avatar photo={acq.photo} initiale={isOwn?getInitiale(acq.nom):"?"} color={ag?.color||C.teal} size={48} border/>
               <div style={{flex:1,minWidth:0}}>
-                <div style={S.cardName}>{isOwn?acq.nom:"Acquéreur confidentiel"}</div>
-                <div style={S.cardSub}>{acq.criteres?.budget_max?`${(acq.criteres.budget_max/1000).toFixed(0)}k€`:"—"} • {acq.criteres?.type||"—"} • {acq.criteres?.villes?.[0]||"—"}</div>
+                <div style={S.cardName}>{isOwn?acq.nom:"AcquÃ©reur confidentiel"}</div>
+                <div style={S.cardSub}>{acq.criteres?.budget_max?`${(acq.criteres.budget_max/1000).toFixed(0)}kâ¬`:"â"} â¢ {acq.criteres?.type||"â"} â¢ {acq.criteres?.villes?.[0]||"â"}</div>
                 <div style={{display:"flex",gap:5,marginTop:4,flexWrap:"wrap",alignItems:"center"}}>
                   <span style={{...S.pill,background:st.color+"18",color:st.color}}>{st.label}</span>
                   <span style={{...S.tag,background:ag?.color||C.teal}}>{isOwn?"Moi":ag?.nom}</span>
-                  {nbMatchs>0&&<span style={{...S.pill,background:C.success+"18",color:C.success}}>🎯 {nbMatchs} match{nbMatchs>1?"s":""}</span>}
+                  {nbMatchs>0&&<span style={{...S.pill,background:C.success+"18",color:C.success}}>ð¯ {nbMatchs} match{nbMatchs>1?"s":""}</span>}
                 </div>
               </div>
             </div>
@@ -557,17 +579,17 @@ function AcqList({ acquereurs, biens, agents, agent, onSelect, onNew }) {
   );
 }
 
-// ── DÉTAIL ACQUÉREUR ──────────────────────────────────────────────────────────
-// ── HELPERS CONTACT ───────────────────────────────────────────────────────────
+// ââ DÃTAIL ACQUÃREUR ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ââ HELPERS CONTACT âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function telClean(tel) { return (tel||"").replace(/\s/g,"").replace(/^0/,"33"); }
 function waUrl(tel, msg="") { const base="https://wa.me/"+telClean(tel); return msg ? base+"?text="+encodeURIComponent(msg) : base; }
 function vCardBlob(acq) {
-  const v = `BEGIN:VCARD\nVERSION:3.0\nFN:${acq.nom||""}\nTEL:${acq.tel||""}\nEMAIL:${acq.email||""}\nNOTE:Budget ${acq.criteres?.budget_max?acq.criteres.budget_max+"€":""} - ${acq.criteres?.type||""} - ${acq.criteres?.villes?.join(", ")||""}\nEND:VCARD`;
+  const v = `BEGIN:VCARD\nVERSION:3.0\nFN:${acq.nom||""}\nTEL:${acq.tel||""}\nEMAIL:${acq.email||""}\nNOTE:Budget ${acq.criteres?.budget_max?acq.criteres.budget_max+"â¬":""} - ${acq.criteres?.type||""} - ${acq.criteres?.villes?.join(", ")||""}\nEND:VCARD`;
   return URL.createObjectURL(new Blob([v],{type:"text/vcard"}));
 }
 
 const QUALIF_COLORS = { A:C.success, B:"#2563eb", C:C.warning, D:C.danger };
-const QUALIF_LABELS = { A:"A — Client chaud 🔥", B:"B — Sérieux 👍", C:"C — En réflexion 🤔", D:"D — Froid ❄️" };
+const QUALIF_LABELS = { A:"A â Client chaud ð¥", B:"B â SÃ©rieux ð", C:"C â En rÃ©flexion ð¤", D:"D â Froid âï¸" };
 
 function AcqDetail({ acq, biens, agents, agent, onBack, onUpdate, onNotif }) {
   const [tab,setTab]=useState("fiche");
@@ -585,28 +607,28 @@ function AcqDetail({ acq, biens, agents, agent, onBack, onUpdate, onNotif }) {
   const startVoice=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;const r=new SR();r.lang="fr-FR";r.continuous=true;r.interimResults=true;r.onresult=e=>setNote(Array.from(e.results).map(x=>x[0].transcript).join(" "));r.onend=()=>setRecording(false);r.start();recRef.current=r;setRecording(true);};
   const analyser=async()=>{setLoading(true);const c=await analyserCriteresAcquereur(note);onUpdate({...acq,note_brute:note,criteres:c});setEditNote(false);setLoading(false);};
 
-  // Messages WhatsApp prédéfinis
-  const msgProjet = `Bonjour ${acq.prenom||acq.nom||""} 👋\n\nJ'espère que vous allez bien !\nJe voulais vous contacter pour savoir si votre projet immobilier est toujours d'actualité et si je peux vous aider dans vos recherches.\n\nN'hésitez pas à me tenir au courant 🏠\n\nCordialement,\n${agent.nom} ${agent.prenom}\nAgence Calibre`;
+  // Messages WhatsApp prÃ©dÃ©finis
+  const msgProjet = `Bonjour ${acq.prenom||acq.nom||""} ð\n\nJ'espÃ¨re que vous allez bien !\nJe voulais vous contacter pour savoir si votre projet immobilier est toujours d'actualitÃ© et si je peux vous aider dans vos recherches.\n\nN'hÃ©sitez pas Ã  me tenir au courant ð \n\nCordialement,\n${agent.nom} ${agent.prenom}\nAgence Calibre`;
 
   const envoyerFicheBien = (bien) => {
-    const terrain = bien.surface_terrain ? " • Terrain "+bien.surface_terrain+"m²" : "";
-    const chambres = bien.chambres ? " • "+bien.chambres+" ch." : "";
-    const dpe = bien.dpe ? "🔋 DPE "+bien.dpe+"\n" : "";
-    const equip = (bien.caracteristiques||[]).slice(0,3).map(c=>"✓ "+c).join("\n");
+    const terrain = bien.surface_terrain ? " â¢ Terrain "+bien.surface_terrain+"mÂ²" : "";
+    const chambres = bien.chambres ? " â¢ "+bien.chambres+" ch." : "";
+    const dpe = bien.dpe ? "ð DPE "+bien.dpe+"\n" : "";
+    const equip = (bien.caracteristiques||[]).slice(0,3).map(c=>"â "+c).join("\n");
     const prenom = acq.prenom||acq.nom||"";
-    const msg = "Bonjour "+prenom+" 👋\n\nJ'ai un bien qui pourrait vous intéresser :\n\n🏠 "+bien.type+" — "+bien.adresse+"\n💰 "+(bien.prix?(bien.prix/1000).toFixed(0)+"k€":"—")+"\n📐 "+(bien.surface||"—")+"m²"+terrain+"\n🚪 "+(bien.pieces||"—")+" pièces"+chambres+"\n"+dpe+equip+"\n\n"+(bien.description||"")+"\n\nCordialement,\n"+agent.nom+" "+agent.prenom+" — Agence Calibre";
+    const msg = "Bonjour "+prenom+" ð\n\nJ'ai un bien qui pourrait vous intÃ©resser :\n\nð  "+bien.type+" â "+bien.adresse+"\nð° "+(bien.prix?(bien.prix/1000).toFixed(0)+"kâ¬":"â")+"\nð "+(bien.surface||"â")+"mÂ²"+terrain+"\nðª "+(bien.pieces||"â")+" piÃ¨ces"+chambres+"\n"+dpe+equip+"\n\n"+(bien.description||"")+"\n\nCordialement,\n"+agent.nom+" "+agent.prenom+" â Agence Calibre";
     window.open(waUrl(acq.tel, msg), "_blank");
   };
 
   return (
     <div style={S.si}>
       <div style={S.dh}>
-        <button onClick={onBack} style={S.backBtn}>←</button>
+        <button onClick={onBack} style={S.backBtn}>â</button>
         <div style={{display:"flex",alignItems:"center",gap:10,flex:1}}>
           <Avatar photo={acq.photo} initiale={isOwn?getInitiale(acq.nom):"?"} color={owner?.color||C.teal} size={36} border/>
           <div>
             <div style={{...S.detailName,display:"flex",alignItems:"center",gap:6}}>
-              {isOwn?acq.nom:"Acquéreur confidentiel"}
+              {isOwn?acq.nom:"AcquÃ©reur confidentiel"}
               {qualif&&<span style={{background:QUALIF_COLORS[qualif],color:"#fff",borderRadius:6,padding:"1px 7px",fontSize:11,fontWeight:900}}>{qualif}</span>}
             </div>
             <div style={{display:"flex",gap:5,marginTop:2,flexWrap:"wrap"}}>
@@ -615,7 +637,7 @@ function AcqDetail({ acq, biens, agents, agent, onBack, onUpdate, onNotif }) {
             </div>
           </div>
         </div>
-        {isOwn&&<button onClick={()=>onUpdate({...acq,alerte:!acq.alerte})} style={{...S.iconBtn,color:acq.alerte?C.gold:C.textMuted}}>🔔</button>}
+        {isOwn&&<button onClick={()=>onUpdate({...acq,alerte:!acq.alerte})} style={{...S.iconBtn,color:acq.alerte?C.gold:C.textMuted}}>ð</button>}
       </div>
 
       {/* ACTIONS RAPIDES */}
@@ -624,23 +646,23 @@ function AcqDetail({ acq, biens, agents, agent, onBack, onUpdate, onNotif }) {
           {/* Enregistrer contact */}
           <a href={vCardBlob(acq)} download={`${acq.nom||"contact"}.vcf`}
             style={{...S.actionBtn,background:`${C.teal}12`,color:C.teal,border:`1px solid ${C.teal}25`}}>
-            📱 Contact
+            ð± Contact
           </a>
           {/* WhatsApp direct */}
           <a href={waUrl(acq.tel)} target="_blank" rel="noreferrer"
             style={{...S.actionBtn,background:"#25d36612",color:"#25d366",border:"1px solid #25d36625"}}>
-            💬 WhatsApp
+            ð¬ WhatsApp
           </a>
           {/* Message "Toujours un projet ?" */}
           <a href={waUrl(acq.tel, msgProjet)} target="_blank" rel="noreferrer"
             style={{...S.actionBtn,background:`${C.gold}12`,color:C.gold,border:`1px solid ${C.gold}25`,whiteSpace:"nowrap"}}>
-            🔄 Projet actif ?
+            ð Projet actif ?
           </a>
           {/* Qualification */}
           <div style={{position:"relative",flexShrink:0}}>
             <button onClick={()=>setShowQualif(!showQualif)}
               style={{...S.actionBtn,background:qualif?QUALIF_COLORS[qualif]+"20":`${C.textMuted}12`,color:qualif?QUALIF_COLORS[qualif]:C.textMuted,border:`1px solid ${qualif?QUALIF_COLORS[qualif]+"35":C.borderDark}`}}>
-              ⭐ {qualif||"Qualif"}
+              â­ {qualif||"Qualif"}
             </button>
             {showQualif&&(
               <div style={{position:"absolute",top:"110%",left:0,background:C.white,borderRadius:12,border:`1px solid ${C.borderDark}`,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:50,width:180,padding:8}}>
@@ -650,7 +672,7 @@ function AcqDetail({ acq, biens, agents, agent, onBack, onUpdate, onNotif }) {
                     {v}
                   </button>
                 ))}
-                {qualif&&<button onClick={()=>{onUpdate({...acq,qualification:null});setShowQualif(false);}} style={{width:"100%",background:"none",border:"none",borderRadius:8,padding:"6px 10px",fontSize:11,color:C.textMuted,cursor:"pointer",textAlign:"left"}}>✕ Retirer</button>}
+                {qualif&&<button onClick={()=>{onUpdate({...acq,qualification:null});setShowQualif(false);}} style={{width:"100%",background:"none",border:"none",borderRadius:8,padding:"6px 10px",fontSize:11,color:C.textMuted,cursor:"pointer",textAlign:"left"}}>â Retirer</button>}
               </div>
             )}
           </div>
@@ -658,7 +680,7 @@ function AcqDetail({ acq, biens, agents, agent, onBack, onUpdate, onNotif }) {
       )}
 
       <div style={S.tabs}>
-        {[["fiche","📋 Fiche"],["profil","👤 Profil"],["matchs",`🎯 Matchs (${matchs.length})`]].map(([id,lb])=>(
+        {[["fiche","ð Fiche"],["profil","ð¤ Profil"],["matchs",`ð¯ Matchs (${matchs.length})`]].map(([id,lb])=>(
           <button key={id} onClick={()=>setTab(id)} style={{...S.tab,...(tab===id?{...S.tabOn,color:C.teal,borderColor:C.teal}:{})}}>
             {lb}{id==="matchs"&&matchs.length>0&&<span style={S.tabBadge}>{matchs.length}</span>}
           </button>
@@ -667,51 +689,51 @@ function AcqDetail({ acq, biens, agents, agent, onBack, onUpdate, onNotif }) {
 
       <div style={S.scroll}>
         {tab==="fiche"&&<>
-          {!isOwn&&<div style={S.confBanner}>🔒 Informations masquées — appartient à <b>{owner?.nom}</b></div>}
+          {!isOwn&&<div style={S.confBanner}>ð Informations masquÃ©es â appartient Ã  <b>{owner?.nom}</b></div>}
           {isOwn&&<div style={{display:"flex",justifyContent:"center",padding:"14px 0 4px"}}><PhotoPicker current={acq.photo} label="Photo du client" size={80} onPhoto={p=>onUpdate({...acq,photo:p})}/></div>}
-          <Sec title="Coordonnées">
+          <Sec title="CoordonnÃ©es">
             {isOwn?<>
-              <Row icon="📞" val={acq.tel||"—"}/>
-              <Row icon="✉️" val={acq.email||"—"}/>
+              <Row icon="ð" val={acq.tel||"â"}/>
+              <Row icon="âï¸" val={acq.email||"â"}/>
               {acq.tel&&<div style={{display:"flex",gap:8,marginTop:8}}>
-                <a href={`tel:${acq.tel}`} style={S.contactA}>📞 Appeler</a>
-                <a href={`mailto:${acq.email}`} style={S.contactA}>✉️ Email</a>
-                <a href={waUrl(acq.tel)} target="_blank" rel="noreferrer" style={{...S.contactA,background:"#25d36610",border:"1px solid #25d36625",color:"#25d366"}}>💬 WA</a>
+                <a href={`tel:${acq.tel}`} style={S.contactA}>ð Appeler</a>
+                <a href={`mailto:${acq.email}`} style={S.contactA}>âï¸ Email</a>
+                <a href={waUrl(acq.tel)} target="_blank" rel="noreferrer" style={{...S.contactA,background:"#25d36610",border:"1px solid #25d36625",color:"#25d366"}}>ð¬ WA</a>
               </div>}
             </>:<>
-              <Row icon="📞" val="●●● ●● ●● ●● ●●"/>
-              <Row icon="✉️" val="●●●●@●●●●.●●"/>
+              <Row icon="ð" val="âââ ââ ââ ââ ââ"/>
+              <Row icon="âï¸" val="ââââ@ââââ.ââ"/>
             </>}
-            <Row icon="👤" val={isOwn?"Mon client":`Agent: ${owner?.nom}`}/>
+            <Row icon="ð¤" val={isOwn?"Mon client":`Agent: ${owner?.nom}`}/>
           </Sec>
-          <Sec title="🎤 Note vocale" action={isOwn&&<button onClick={()=>setEditNote(!editNote)} style={S.editLink}>{editNote?"Annuler":"✏️"}</button>}>
+          <Sec title="ð¤ Note vocale" action={isOwn&&<button onClick={()=>setEditNote(!editNote)} style={S.editLink}>{editNote?"Annuler":"âï¸"}</button>}>
             {isOwn&&editNote?<>
               <textarea value={note} onChange={e=>setNote(e.target.value)} style={S.textarea} rows={4}/>
               <div style={{display:"flex",gap:8,marginTop:8}}>
-                <button onClick={recording?()=>{recRef.current?.stop();setRecording(false);}:startVoice} style={{...S.voiceBtn,...(recording?S.voiceBtnRec:{})}}>{recording?"⏹ Stop":"🎤 Dicter"}</button>
-                <button onClick={analyser} disabled={loading} style={S.analyseBtn}>{loading?"⏳…":"✨ IA → Critères"}</button>
+                <button onClick={recording?()=>{recRef.current?.stop();setRecording(false);}:startVoice} style={{...S.voiceBtn,...(recording?S.voiceBtnRec:{})}}>{recording?"â¹ Stop":"ð¤ Dicter"}</button>
+                <button onClick={analyser} disabled={loading} style={S.analyseBtn}>{loading?"â³â¦":"â¨ IA â CritÃ¨res"}</button>
               </div>
               {recording&&<RecBar/>}
             </>:<div style={S.noteBox}>{isOwn?(acq.note_brute||<em style={{color:C.textMuted}}>Aucune note</em>):<em style={{color:C.textMuted}}>Confidentiel</em>}</div>}
           </Sec>
-          {acq.criteres&&<Sec title="🎯 Critères de recherche"><CriteresGrid c={acq.criteres}/></Sec>}
+          {acq.criteres&&<Sec title="ð¯ CritÃ¨res de recherche"><CriteresGrid c={acq.criteres}/></Sec>}
         </>}
 
         {tab==="profil"&&<>
-          {!isOwn?<div style={S.confBanner}>🔒 Profil masqué — appartient à <b>{owner?.nom}</b></div>:<>
+          {!isOwn?<div style={S.confBanner}>ð Profil masquÃ© â appartient Ã  <b>{owner?.nom}</b></div>:<>
             <Sec title="Situation personnelle">
-              <Row icon="👶" val={`${acq.nb_enfants||0} enfant${(acq.nb_enfants||0)>1?"s":""}`}/>
-              {acq.situation&&<Row icon="💑" val={acq.situation}/>}
+              <Row icon="ð¶" val={`${acq.nb_enfants||0} enfant${(acq.nb_enfants||0)>1?"s":""}`}/>
+              {acq.situation&&<Row icon="ð" val={acq.situation}/>}
             </Sec>
             <Sec title="Profession">
-              <Row icon="👨‍💼" val={"M. : "+(acq.metier_m||"—")+(acq.secteur_travail_m?" ("+acq.secteur_travail_m+")":"")}/>
-              <Row icon="👩‍💼" val={"Mme : "+(acq.metier_f||"—")+(acq.secteur_travail_f?" ("+acq.secteur_travail_f+")":"")}/>
+              <Row icon="ð¨âð¼" val={"M. : "+(acq.metier_m||"â")+(acq.secteur_travail_m?" ("+acq.secteur_travail_m+")":"")}/>
+              <Row icon="ð©âð¼" val={"Mme : "+(acq.metier_f||"â")+(acq.secteur_travail_f?" ("+acq.secteur_travail_f+")":"")}/>
             </Sec>
             <Sec title="Projet immobilier">
-              <Row icon="💰" val={`Budget : ${acq.budget_min?acq.budget_min+"€ min — ":""}${acq.budget_max?acq.budget_max+"€ max":"NC"}`}/>
-              <Row icon="📐" val={`Surface : ${acq.surface_min||"—"}m² à ${acq.surface_max||"—"}m²`}/>
-              {(acq.terrain_min||acq.terrain_max)&&<Row icon="🌿" val={`Terrain : ${acq.terrain_min||"—"}m² à ${acq.terrain_max||"—"}m²`}/>}
-              <Row icon="📍" val={`Secteurs : ${(acq.secteurs||[]).join(", ")||"—"}`}/>
+              <Row icon="ð°" val={`Budget : ${acq.budget_min?acq.budget_min+"â¬ min â ":""}${acq.budget_max?acq.budget_max+"â¬ max":"NC"}`}/>
+              <Row icon="ð" val={`Surface : ${acq.surface_min||"â"}mÂ² Ã  ${acq.surface_max||"â"}mÂ²`}/>
+              {(acq.terrain_min||acq.terrain_max)&&<Row icon="ð¿" val={`Terrain : ${acq.terrain_min||"â"}mÂ² Ã  ${acq.terrain_max||"â"}mÂ²`}/>}
+              <Row icon="ð" val={`Secteurs : ${(acq.secteurs||[]).join(", ")||"â"}`}/>
             </Sec>
             {acq.notes_profil&&<Sec title="Notes"><div style={S.noteBox}>{acq.notes_profil}</div></Sec>}
           </>}
@@ -730,7 +752,7 @@ function AcqDetail({ acq, biens, agents, agent, onBack, onUpdate, onNotif }) {
                 <div key={b.id} style={S.matchCard}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                     <div style={{flex:1}}>
-                      <div style={{fontWeight:700,fontSize:13,color:C.teal}}>{b.type} — {b.ville||b.adresse?.split(",").pop()?.trim()}</div>
+                      <div style={{fontWeight:700,fontSize:13,color:C.teal}}>{b.type} â {b.ville||b.adresse?.split(",").pop()?.trim()}</div>
                       <div style={{fontSize:12,color:C.text,fontWeight:600,marginTop:2}}>{b.adresse}</div>
                     </div>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
@@ -739,10 +761,10 @@ function AcqDetail({ acq, biens, agents, agent, onBack, onUpdate, onNotif }) {
                     </div>
                   </div>
                   <div style={{display:"flex",gap:12,margin:"6px 0",flexWrap:"wrap"}}>
-                    <MiniStat val={`${(b.prix/1000).toFixed(0)}k€`} lbl="Prix" col={C.success}/>
-                    <MiniStat val={`${b.surface}m²`} lbl="Hab." col={C.teal}/>
-                    {b.surface_terrain&&<MiniStat val={`${b.surface_terrain}m²`} lbl="Terrain" col="#7c3aed"/>}
-                    <MiniStat val={`${b.pieces||"—"}p`} lbl="Pièces" col={C.gold}/>
+                    <MiniStat val={`${(b.prix/1000).toFixed(0)}kâ¬`} lbl="Prix" col={C.success}/>
+                    <MiniStat val={`${b.surface}mÂ²`} lbl="Hab." col={C.teal}/>
+                    {b.surface_terrain&&<MiniStat val={`${b.surface_terrain}mÂ²`} lbl="Terrain" col="#7c3aed"/>}
+                    <MiniStat val={`${b.pieces||"â"}p`} lbl="PiÃ¨ces" col={C.gold}/>
                     {b.dpe&&<MiniStat val={b.dpe} lbl="DPE" col={b.dpe<="C"?C.success:b.dpe<="D"?C.warning:C.danger}/>}
                   </div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>
@@ -751,31 +773,31 @@ function AcqDetail({ acq, biens, agents, agent, onBack, onUpdate, onNotif }) {
                   </div>
                   {b.pieceMatches?.length>0&&(
                     <div style={{background:`${C.teal}06`,borderRadius:8,padding:"8px 10px",marginBottom:8}}>
-                      <div style={{fontSize:10,fontWeight:800,color:C.textSub,textTransform:"uppercase",marginBottom:5}}>📐 Pièces</div>
+                      <div style={{fontSize:10,fontWeight:800,color:C.textSub,textTransform:"uppercase",marginBottom:5}}>ð PiÃ¨ces</div>
                       {b.pieceMatches.map((pm,i)=>(
                         <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:3}}>
                           <span style={{color:C.text}}>{pm.nom}</span>
-                          <span style={{fontWeight:700,color:pm.ok?C.success:C.danger}}>{pm.surface?`${pm.surface}m²`:""} {pm.ok?"✓":"✗"}</span>
+                          <span style={{fontWeight:700,color:pm.ok?C.success:C.danger}}>{pm.surface?`${pm.surface}mÂ²`:""} {pm.ok?"â":"â"}</span>
                         </div>
                       ))}
                     </div>
                   )}
                   {/* Boutons action */}
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    {/* Visité / Pas visité */}
+                    {/* VisitÃ© / Pas visitÃ© */}
                     {isOwn&&<button onClick={()=>{const v=acq.biens_visites||[];onUpdate({...acq,biens_visites:visite?v.filter(x=>x!==b.id):[...v,b.id]});}}
                       style={{...S.visitBtn,...(visite?{background:C.success+"15",color:C.success,border:`1px solid ${C.success}30`}:{})}}>
-                      {visite?"✅ Visité":"👁 Marquer visité"}
+                      {visite?"â VisitÃ©":"ð Marquer visitÃ©"}
                     </button>}
                     {/* Envoyer par WhatsApp */}
                     {isOwn&&acq.tel&&<button onClick={()=>envoyerFicheBien(b)}
                       style={{...S.visitBtn,background:"#25d36612",color:"#25d366",border:"1px solid #25d36625"}}>
-                      💬 Envoyer WA
+                      ð¬ Envoyer WA
                     </button>}
                     {/* Envoyer par email */}
-                    {isOwn&&acq.email&&<a href={"mailto:"+acq.email+"?subject=Bien+immobilier+pour+vous&body="+encodeURIComponent("Bonjour "+(acq.prenom||acq.nom||"")+",\n\nJ'ai un bien qui pourrait vous intéresser :\n\n"+b.type+" — "+b.adresse+"\n"+(b.prix?(b.prix/1000).toFixed(0)+"k€":"")+" • "+(b.surface||"—")+"m²\n\n"+(b.description||"")+"\n\nCordialement,\n"+agent.nom+" "+agent.prenom+"\nAgence Calibre")}
+                    {isOwn&&acq.email&&<a href={"mailto:"+acq.email+"?subject=Bien+immobilier+pour+vous&body="+encodeURIComponent("Bonjour "+(acq.prenom||acq.nom||"")+",\n\nJ'ai un bien qui pourrait vous intÃ©resser :\n\n"+b.type+" â "+b.adresse+"\n"+(b.prix?(b.prix/1000).toFixed(0)+"kâ¬":"")+" â¢ "+(b.surface||"â")+"mÂ²\n\n"+(b.description||"")+"\n\nCordialement,\n"+agent.nom+" "+agent.prenom+"\nAgence Calibre")}
                       style={{...S.visitBtn,background:C.blueLight+"12",color:C.blueLight,border:"1px solid "+C.blueLight+"25",textDecoration:"none"}}>
-                      📧 Email
+                      ð§ Email
                     </a>}
                     {(!isOwn||!isOwnBien)&&<MiseEnRelation isOwnAcq={isOwn} isOwnBien={isOwnBien} acqAgent={owner} bienAgent={bAg} onSend={(toId,msg)=>onNotif(agent,toId,msg)}/>}
                   </div>
@@ -789,13 +811,13 @@ function AcqDetail({ acq, biens, agents, agent, onBack, onUpdate, onNotif }) {
   );
 }
 
-// ── LISTE BIENS ───────────────────────────────────────────────────────────────
+// ââ LISTE BIENS âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function BienList({ biens, acquereurs, agents, agent, onSelect, onNew }) {
   const [search,setSearch]=useState("");
   const filtered=biens.filter(b=>b.adresse?.toLowerCase().includes(search.toLowerCase())||b.ville?.toLowerCase().includes(search.toLowerCase()));
   return (
     <div style={S.si}>
-      <div style={S.listTop}><input placeholder="🔍 Rechercher…" value={search} onChange={e=>setSearch(e.target.value)} style={S.searchInput}/><button onClick={onNew} style={S.fab}>+</button></div>
+      <div style={S.listTop}><input placeholder="ð Rechercherâ¦" value={search} onChange={e=>setSearch(e.target.value)} style={S.searchInput}/><button onClick={onNew} style={S.fab}>+</button></div>
       <div style={S.scroll}>
         {filtered.length===0&&<div style={S.empty}>Aucun bien.<br/>Importez une fiche PDF IAD ou saisissez manuellement.</div>}
         {filtered.map(b=>{
@@ -804,15 +826,15 @@ function BienList({ biens, acquereurs, agents, agent, onSelect, onNew }) {
           return (
             <div key={b.id} onClick={()=>onSelect(b)} style={S.card}>
               <div style={{width:48,height:48,borderRadius:14,background:`linear-gradient(135deg,${C.teal}20,${C.blueLight}15)`,border:`1px solid ${C.teal}25`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>
-                {b.type==="Maison"?"🏡":b.type==="Terrain"?"🌿":"🏢"}
+                {b.type==="Maison"?"ð¡":b.type==="Terrain"?"ð¿":"ð¢"}
               </div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={S.cardName}>{b.adresse||b.ville||"Bien sans adresse"}</div>
-                <div style={S.cardSub}>{b.prix?(b.prix/1000).toFixed(0)+"k€":"—"} • {b.surface||"—"}m² • {b.pieces||"—"}p {b.dpe?`• DPE ${b.dpe}`:""}</div>
+                <div style={S.cardSub}>{b.prix?(b.prix/1000).toFixed(0)+"kâ¬":"â"} â¢ {b.surface||"â"}mÂ² â¢ {b.pieces||"â"}p {b.dpe?`â¢ DPE ${b.dpe}`:""}</div>
                 <div style={{display:"flex",gap:5,marginTop:4,flexWrap:"wrap",alignItems:"center"}}>
-                  <span style={{...S.pill,background:C.teal+"15",color:C.teal}}>{b.type||"—"}</span>
+                  <span style={{...S.pill,background:C.teal+"15",color:C.teal}}>{b.type||"â"}</span>
                   <span style={{...S.tag,background:ag?.color||C.teal}}>{ag?.id===agent.id?"Moi":ag?.nom}</span>
-                  {nbMatchs>0&&<span style={{...S.pill,background:C.success+"18",color:C.success}}>🎯 {nbMatchs} acq.</span>}
+                  {nbMatchs>0&&<span style={{...S.pill,background:C.success+"18",color:C.success}}>ð¯ {nbMatchs} acq.</span>}
                 </div>
               </div>
             </div>
@@ -823,7 +845,7 @@ function BienList({ biens, acquereurs, agents, agent, onSelect, onNew }) {
   );
 }
 
-// ── DÉTAIL BIEN ───────────────────────────────────────────────────────────────
+// ââ DÃTAIL BIEN âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif }) {
   const [tab,setTab]=useState("fiche");
   const owner=agents.find(a=>a.id===bien.agentId);
@@ -833,12 +855,12 @@ function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif }) {
   return (
     <div style={S.si}>
       <div style={S.dh}>
-        <button onClick={onBack} style={S.backBtn}>←</button>
+        <button onClick={onBack} style={S.backBtn}>â</button>
         <div style={{flex:1}}>
-          <div style={S.detailName}>{bien.type} — {bien.ville||bien.adresse?.split(",")[0]||"Bien"}</div>
+          <div style={S.detailName}>{bien.type} â {bien.ville||bien.adresse?.split(",")[0]||"Bien"}</div>
           <div style={{display:"flex",gap:5,marginTop:2,flexWrap:"wrap"}}>
             <span style={{...S.tag,background:owner?.color||C.teal}}>{isOwn?"Mon bien":owner?.nom}</span>
-            {bien.numero_mandat&&<span style={{...S.pill,background:C.teal+"15",color:C.teal}}>N°{bien.numero_mandat}</span>}
+            {bien.numero_mandat&&<span style={{...S.pill,background:C.teal+"15",color:C.teal}}>NÂ°{bien.numero_mandat}</span>}
           </div>
         </div>
       </div>
@@ -846,11 +868,11 @@ function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif }) {
       {/* Banner matchs */}
       <div style={{...S.matchBanner,margin:"10px 16px 0"}}>
         <div style={{...S.matchNum,color:C.teal}}>{matchs.length}</div>
-        <div style={S.matchLbl}>acquéreur{matchs.length>1?"s":""} correspondent dans le portefeuille</div>
+        <div style={S.matchLbl}>acquÃ©reur{matchs.length>1?"s":""} correspondent dans le portefeuille</div>
       </div>
 
       <div style={S.tabs}>
-        {[["fiche","🏠 Fiche"],["matchs",`🎯 Acquéreurs (${matchs.length})`]].map(([id,lb])=>(
+        {[["fiche","ð  Fiche"],["matchs",`ð¯ AcquÃ©reurs (${matchs.length})`]].map(([id,lb])=>(
           <button key={id} onClick={()=>setTab(id)} style={{...S.tab,...(tab===id?{...S.tabOn,color:C.teal,borderColor:C.teal}:{})}}>{lb}</button>
         ))}
       </div>
@@ -858,22 +880,22 @@ function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif }) {
       <div style={S.scroll}>
         {tab==="fiche"&&<>
           {/* Stats principales */}
-          <Sec title="Caractéristiques">
+          <Sec title="CaractÃ©ristiques">
             <div style={S.bienGrid}>
-              <StatBox val={`${(bien.prix/1000||0).toFixed(0)}k€`} lbl="Prix" col={C.success}/>
-              <StatBox val={`${bien.surface||"—"}m²`} lbl="Hab." col={C.teal}/>
-              {bien.surface_terrain&&<StatBox val={`${bien.surface_terrain}m²`} lbl="Terrain" col="#7c3aed"/>}
-              <StatBox val={`${bien.pieces||"—"}p`} lbl="Pièces" col={C.gold}/>
+              <StatBox val={`${(bien.prix/1000||0).toFixed(0)}kâ¬`} lbl="Prix" col={C.success}/>
+              <StatBox val={`${bien.surface||"â"}mÂ²`} lbl="Hab." col={C.teal}/>
+              {bien.surface_terrain&&<StatBox val={`${bien.surface_terrain}mÂ²`} lbl="Terrain" col="#7c3aed"/>}
+              <StatBox val={`${bien.pieces||"â"}p`} lbl="PiÃ¨ces" col={C.gold}/>
               {bien.chambres&&<StatBox val={bien.chambres} lbl="Chambres" col="#db2777"/>}
               {bien.salles_de_bain&&<StatBox val={bien.salles_de_bain} lbl="SDB" col={C.blueLight}/>}
               {bien.dpe&&<StatBox val={bien.dpe} lbl="DPE" col={bien.dpe<="C"?C.success:bien.dpe<="D"?C.warning:C.danger}/>}
-              {bien.annee_construction&&<StatBox val={bien.annee_construction} lbl="Année" col={C.textSub}/>}
+              {bien.annee_construction&&<StatBox val={bien.annee_construction} lbl="AnnÃ©e" col={C.textSub}/>}
             </div>
-            {bien.adresse&&<Row icon="📍" val={bien.adresse}/>}
-            {bien.taxe_fonciere&&<Row icon="💼" val={`Taxe foncière : ${bien.taxe_fonciere}€/an`}/>}
-            {bien.exposition&&<Row icon="🧭" val={`Exposition ${bien.exposition}`}/>}
+            {bien.adresse&&<Row icon="ð" val={bien.adresse}/>}
+            {bien.taxe_fonciere&&<Row icon="ð¼" val={`Taxe fonciÃ¨re : ${bien.taxe_fonciere}â¬/an`}/>}
+            {bien.exposition&&<Row icon="ð§­" val={`Exposition ${bien.exposition}`}/>}
             {bien.description&&<div style={{...S.noteBox,marginTop:8}}>{bien.description}</div>}
-            {/* Équipements */}
+            {/* Ãquipements */}
             {(bien.caracteristiques||[]).length>0&&(
               <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
                 {(bien.caracteristiques||[]).map((c,i)=><Chip key={i}>{c}</Chip>)}
@@ -881,18 +903,18 @@ function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif }) {
             )}
           </Sec>
 
-          {/* Détail pièces */}
+          {/* DÃ©tail piÃ¨ces */}
           {bien.detail_pieces?.length>0&&(
-            <Sec title={`📐 Pièces (${bien.detail_pieces.length})`}>
+            <Sec title={`ð PiÃ¨ces (${bien.detail_pieces.length})`}>
               <div style={{background:`${C.teal}06`,border:`1px solid ${C.teal}12`,borderRadius:12,overflow:"hidden"}}>
                 {bien.detail_pieces.map((p,i)=>(
                   <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 12px",borderBottom:i<bien.detail_pieces.length-1?`1px solid ${C.teal}08`:"none",background:i%2===0?"transparent":`${C.teal}03`}}>
                     <div style={{flex:1}}>
                       <span style={{fontWeight:600,fontSize:13,color:C.text}}>{p.nom}</span>
-                      {p.niveau!==undefined&&<span style={{fontSize:10,color:C.textMuted,marginLeft:6}}>{p.niveau===0?"RDC":`Étage ${p.niveau}`}</span>}
-                      {p.equipements?.length>0&&<div style={{fontSize:10,color:C.textMuted,marginTop:1}}>{p.equipements.slice(0,3).join(" • ")}</div>}
+                      {p.niveau!==undefined&&<span style={{fontSize:10,color:C.textMuted,marginLeft:6}}>{p.niveau===0?"RDC":`Ãtage ${p.niveau}`}</span>}
+                      {p.equipements?.length>0&&<div style={{fontSize:10,color:C.textMuted,marginTop:1}}>{p.equipements.slice(0,3).join(" â¢ ")}</div>}
                     </div>
-                    {p.surface&&<div style={{background:`linear-gradient(135deg,${C.teal},${C.blueLight})`,borderRadius:8,padding:"3px 9px",fontSize:12,fontWeight:800,color:"#fff",flexShrink:0}}>{p.surface} m²</div>}
+                    {p.surface&&<div style={{background:`linear-gradient(135deg,${C.teal},${C.blueLight})`,borderRadius:8,padding:"3px 9px",fontSize:12,fontWeight:800,color:"#fff",flexShrink:0}}>{p.surface} mÂ²</div>}
                   </div>
                 ))}
               </div>
@@ -901,12 +923,12 @@ function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif }) {
 
           {/* Surfaces annexes */}
           {bien.surfaces_annexes?.length>0&&(
-            <Sec title="🏗️ Surfaces annexes">
+            <Sec title="ðï¸ Surfaces annexes">
               <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                 {bien.surfaces_annexes.map((s,i)=>(
                   <div key={i} style={{background:C.accent,border:`1px solid ${C.teal}20`,borderRadius:10,padding:"6px 12px",fontSize:12}}>
                     <span style={{fontWeight:600,color:C.teal}}>{s.nom}</span>
-                    {s.surface&&<span style={{color:C.textSub,marginLeft:6}}>{s.surface}m²</span>}
+                    {s.surface&&<span style={{color:C.textSub,marginLeft:6}}>{s.surface}mÂ²</span>}
                   </div>
                 ))}
               </div>
@@ -915,7 +937,7 @@ function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif }) {
         </>}
 
         {tab==="matchs"&&<>
-          {matchs.length===0&&<div style={S.empty}>Aucun acquéreur ne correspond encore.<br/><br/>Ajoutez des acquéreurs via le + dans l'onglet Acquéreurs.</div>}
+          {matchs.length===0&&<div style={S.empty}>Aucun acquÃ©reur ne correspond encore.<br/><br/>Ajoutez des acquÃ©reurs via le + dans l'onglet AcquÃ©reurs.</div>}
           {matchs.map(acq=>{
             const acqAg=agents.find(a=>a.id===acq.agentId);const isOwnAcq=acq.agentId===agent.id;
             return (
@@ -924,7 +946,7 @@ function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif }) {
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <Avatar photo={isOwnAcq?acq.photo:null} initiale={isOwnAcq?getInitiale(acq.nom):"?"} color={acqAg?.color||C.teal} size={36} border/>
                     <div>
-                      <div style={{fontWeight:700,fontSize:14,color:C.text}}>{isOwnAcq?acq.nom:"Acquéreur confidentiel"}</div>
+                      <div style={{fontWeight:700,fontSize:14,color:C.text}}>{isOwnAcq?acq.nom:"AcquÃ©reur confidentiel"}</div>
                       <div style={{fontSize:11,color:C.textSub}}>{isOwnAcq?acq.email:`Agent: ${acqAg?.nom}`}</div>
                       {acq.criteres?.resume&&<div style={{fontSize:10,color:C.teal,fontStyle:"italic",marginTop:1}}>{acq.criteres.resume}</div>}
                     </div>
@@ -937,22 +959,22 @@ function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif }) {
                 </div>
                 {acq.pieceMatches?.length>0&&(
                   <div style={{background:`${C.teal}06`,borderRadius:8,padding:"8px 10px",marginBottom:6}}>
-                    <div style={{fontSize:10,fontWeight:800,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:5}}>📐 Matching pièces</div>
+                    <div style={{fontSize:10,fontWeight:800,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:5}}>ð Matching piÃ¨ces</div>
                     {acq.pieceMatches.map((pm,i)=>(
                       <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:3}}>
                         <span style={{color:C.text}}>{pm.nom}</span>
-                        <span style={{fontWeight:700,color:pm.ok?C.success:C.danger}}>{pm.surface?`${pm.surface}m²`:""} {pm.ok?"✓":"✗"}</span>
+                        <span style={{fontWeight:700,color:pm.ok?C.success:C.danger}}>{pm.surface?`${pm.surface}mÂ²`:""} {pm.ok?"â":"â"}</span>
                       </div>
                     ))}
                   </div>
                 )}
                 {isOwnAcq?(<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                  <a href={`tel:${acq.tel}`} style={S.contactA}>📞 Appeler</a>
-                  <a href={`mailto:${acq.email}`} style={S.contactA}>✉️ Email</a>
-                  {acq.tel&&<a href={waUrl(acq.tel)} target="_blank" rel="noreferrer" style={{...S.contactA,background:"#25d36610",color:"#25d366",border:"1px solid #25d36625"}}>💬 WA</a>}
-                  {/* Marquer visité depuis le bien */}
-                  <button onClick={()=>{const v=acq.biens_visites||[];const visite=v.includes(bien.id);/* on ne peut pas modifier acq depuis BienDetail directement, on notifie */alert(`✅ Pour marquer comme visité, ouvrez la fiche de ${acq.nom} → onglet Matchs`);}}
-                    style={{...S.visitBtn}}>👁 Visité ?</button>
+                  <a href={`tel:${acq.tel}`} style={S.contactA}>ð Appeler</a>
+                  <a href={`mailto:${acq.email}`} style={S.contactA}>âï¸ Email</a>
+                  {acq.tel&&<a href={waUrl(acq.tel)} target="_blank" rel="noreferrer" style={{...S.contactA,background:"#25d36610",color:"#25d366",border:"1px solid #25d36625"}}>ð¬ WA</a>}
+                  {/* Marquer visitÃ© depuis le bien */}
+                  <button onClick={()=>{const v=acq.biens_visites||[];const visite=v.includes(bien.id);/* on ne peut pas modifier acq depuis BienDetail directement, on notifie */alert(`â Pour marquer comme visitÃ©, ouvrez la fiche de ${acq.nom} â onglet Matchs`);}}
+                    style={{...S.visitBtn}}>ð VisitÃ© ?</button>
                 </div>)
                 :(<MiseEnRelation isOwnAcq={false} isOwnBien={isOwn} acqAgent={acqAg} bienAgent={owner} onSend={(toId,msg)=>onNotif(agent,toId,msg)}/>)}
               </div>
@@ -964,7 +986,7 @@ function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif }) {
   );
 }
 
-// ── NEW ACQUÉREUR ─────────────────────────────────────────────────────────────
+// ââ NEW ACQUÃREUR âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function NewAcq({ agent, onBack, onSave }) {
   const [tab,setTab]=useState("identite"); // identite | profil | criteres
   const [nom,setNom]=useState(""); const [prenom,setPrenom]=useState("");
@@ -976,11 +998,11 @@ function NewAcq({ agent, onBack, onSave }) {
   const [metier_m,setMetierM]=useState(""); const [secteur_travail_m,setSecteurM]=useState("");
   const [metier_f,setMetierF]=useState(""); const [secteur_travail_f,setSecteurF]=useState("");
   const [notes_profil,setNotesProfil]=useState("");
-  // Critères
+  // CritÃ¨res
   const [budget_min,setBudgetMin]=useState(""); const [budget_max,setBudgetMax]=useState("");
   const [surface_min,setSurfMin]=useState(""); const [surface_max,setSurfMax]=useState("");
   const [terrain_min,setTerrMin]=useState(""); const [terrain_max,setTerrMax]=useState("");
-  const [secteurs,setSecteurs]=useState(""); // communes séparées par virgule
+  const [secteurs,setSecteurs]=useState(""); // communes sÃ©parÃ©es par virgule
   const [note,setNote]=useState("");
   const [criteres,setCriteres]=useState(null); const [loading,setLoading]=useState(false);
   const [recording,setRecording]=useState(false);
@@ -1027,11 +1049,11 @@ function NewAcq({ agent, onBack, onSave }) {
 
   return (
     <div style={S.si}>
-      <div style={S.dh}><button onClick={onBack} style={S.backBtn}>←</button><div style={S.detailName}>Nouvel acquéreur</div><span style={{...S.tag,background:agent.color}}>{agent.nom}</span></div>
+      <div style={S.dh}><button onClick={onBack} style={S.backBtn}>â</button><div style={S.detailName}>Nouvel acquÃ©reur</div><span style={{...S.tag,background:agent.color}}>{agent.nom}</span></div>
 
       {/* Onglets de saisie */}
       <div style={S.tabs}>
-        {[["identite","👤 Identité"],["profil","💼 Profil"],["criteres","🎯 Critères"]].map(([id,lb])=>(
+        {[["identite","ð¤ IdentitÃ©"],["profil","ð¼ Profil"],["criteres","ð¯ CritÃ¨res"]].map(([id,lb])=>(
           <button key={id} onClick={()=>setTab(id)} style={{...S.tab,...(tab===id?{...S.tabOn,color:C.teal,borderColor:C.teal}:{})}}>{lb}</button>
         ))}
       </div>
@@ -1039,17 +1061,17 @@ function NewAcq({ agent, onBack, onSave }) {
       <div style={S.scroll}>
         {tab==="identite"&&<>
           <div style={{display:"flex",justifyContent:"center",padding:"14px 0 4px"}}><PhotoPicker current={photo} label="Photo (optionnel)" size={80} onPhoto={setPhoto}/></div>
-          <Sec title="Identité">
+          <Sec title="IdentitÃ©">
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Inp label="Prénom" val={prenom} set={setPrenom} ph="Martin"/>
+              <Inp label="PrÃ©nom" val={prenom} set={setPrenom} ph="Martin"/>
               <Inp label="Nom *" val={nom} set={setNom} ph="Dupont"/>
             </div>
-            <Inp label="Téléphone" val={tel} set={setTel} ph="06 XX XX XX XX" type="tel"/>
+            <Inp label="TÃ©lÃ©phone" val={tel} set={setTel} ph="06 XX XX XX XX" type="tel"/>
             <Inp label="Email" val={email} set={setEmail} ph="email@exemple.fr" type="email"/>
-            <div style={S.ig}><label style={S.lbl}>Étape</label><select value={stage} onChange={e=>setStage(e.target.value)} style={S.select}>{STAGES.map(st=><option key={st.id} value={st.id}>{st.label}</option>)}</select></div>
+            <div style={S.ig}><label style={S.lbl}>Ãtape</label><select value={stage} onChange={e=>setStage(e.target.value)} style={S.select}>{STAGES.map(st=><option key={st.id} value={st.id}>{st.label}</option>)}</select></div>
           </Sec>
           <div style={{padding:"8px 16px 0"}}>
-            <button onClick={()=>setTab("profil")} style={S.primaryBtn}>Suivant — Profil →</button>
+            <button onClick={()=>setTab("profil")} style={S.primaryBtn}>Suivant â Profil â</button>
           </div>
         </>}
 
@@ -1058,62 +1080,62 @@ function NewAcq({ agent, onBack, onSave }) {
             <div style={S.ig}>
               <label style={S.lbl}>Situation familiale</label>
               <select value={situation} onChange={e=>setSituation(e.target.value)} style={S.select}>
-                {["","Célibataire","En couple","Marié(e)","Pacsé(e)","Divorcé(e)","Veuf/Veuve"].map(s=><option key={s} value={s}>{s||"— Choisir —"}</option>)}
+                {["","CÃ©libataire","En couple","MariÃ©(e)","PacsÃ©(e)","DivorcÃ©(e)","Veuf/Veuve"].map(s=><option key={s} value={s}>{s||"â Choisir â"}</option>)}
               </select>
             </div>
             <Inp label="Nombre d'enfants" val={nb_enfants} set={setNbEnfants} ph="0" type="number"/>
           </Sec>
           <Sec title="Professions">
             <div style={{fontSize:11,fontWeight:700,color:C.textSub,textTransform:"uppercase",marginBottom:8}}>Monsieur</div>
-            <Inp label="Métier" val={metier_m} set={setMetierM} ph="ex: Médecin, Chef d'entreprise..."/>
+            <Inp label="MÃ©tier" val={metier_m} set={setMetierM} ph="ex: MÃ©decin, Chef d'entreprise..."/>
             <Inp label="Secteur de travail" val={secteur_travail_m} set={setSecteurM} ph="ex: Nice, Cannes..."/>
             <div style={{fontSize:11,fontWeight:700,color:C.textSub,textTransform:"uppercase",margin:"12px 0 8px"}}>Madame</div>
-            <Inp label="Métier" val={metier_f} set={setMetierF} ph="ex: Infirmière, Enseignante..."/>
-            <Inp label="Secteur de travail" val={secteur_travail_f} set={setSecteurF} ph="ex: Fréjus, Draguignan..."/>
+            <Inp label="MÃ©tier" val={metier_f} set={setMetierF} ph="ex: InfirmiÃ¨re, Enseignante..."/>
+            <Inp label="Secteur de travail" val={secteur_travail_f} set={setSecteurF} ph="ex: FrÃ©jus, Draguignan..."/>
           </Sec>
           <Sec title="Notes profil">
             <textarea value={notes_profil} onChange={e=>setNotesProfil(e.target.value)} placeholder="Notes libres sur le profil du client..." style={S.textarea} rows={3}/>
           </Sec>
           <div style={{padding:"8px 16px 0"}}>
-            <button onClick={()=>setTab("criteres")} style={S.primaryBtn}>Suivant — Critères →</button>
+            <button onClick={()=>setTab("criteres")} style={S.primaryBtn}>Suivant â CritÃ¨res â</button>
           </div>
         </>}
 
         {tab==="criteres"&&<>
           <Sec title="Budget">
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Inp label="Budget min (€)" val={budget_min} set={setBudgetMin} ph="300000" type="number"/>
-              <Inp label="Budget max (€)" val={budget_max} set={setBudgetMax} ph="650000" type="number"/>
+              <Inp label="Budget min (â¬)" val={budget_min} set={setBudgetMin} ph="300000" type="number"/>
+              <Inp label="Budget max (â¬)" val={budget_max} set={setBudgetMax} ph="650000" type="number"/>
             </div>
           </Sec>
           <Sec title="Surface habitable">
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Inp label="Min (m²)" val={surface_min} set={setSurfMin} ph="100" type="number"/>
-              <Inp label="Max (m²)" val={surface_max} set={setSurfMax} ph="200" type="number"/>
+              <Inp label="Min (mÂ²)" val={surface_min} set={setSurfMin} ph="100" type="number"/>
+              <Inp label="Max (mÂ²)" val={surface_max} set={setSurfMax} ph="200" type="number"/>
             </div>
           </Sec>
           <Sec title="Terrain">
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Inp label="Min (m²)" val={terrain_min} set={setTerrMin} ph="500" type="number"/>
-              <Inp label="Max (m²)" val={terrain_max} set={setTerrMax} ph="2000" type="number"/>
+              <Inp label="Min (mÂ²)" val={terrain_min} set={setTerrMin} ph="500" type="number"/>
+              <Inp label="Max (mÂ²)" val={terrain_max} set={setTerrMax} ph="2000" type="number"/>
             </div>
           </Sec>
           <Sec title="Secteurs de recherche">
-            <Inp label="Communes (séparées par des virgules)" val={secteurs} set={setSecteurs} ph="Montauroux, Fayence, Callian, Seillans..."/>
-            {secteurs&&<div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:6}}>{secteurs.split(",").map(s=>s.trim()).filter(Boolean).map((s,i)=><Chip key={i}>📍 {s}</Chip>)}</div>}
+            <Inp label="Communes (sÃ©parÃ©es par des virgules)" val={secteurs} set={setSecteurs} ph="Montauroux, Fayence, Callian, Seillans..."/>
+            {secteurs&&<div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:6}}>{secteurs.split(",").map(s=>s.trim()).filter(Boolean).map((s,i)=><Chip key={i}>ð {s}</Chip>)}</div>}
           </Sec>
-          <Sec title="🎤 Autres critères (vocal ou texte)">
-            <div style={{fontSize:12,color:C.textSub,marginBottom:8}}>Dictez les critères restants : type de bien, équipements souhaités, tailles de pièces…</div>
-            <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder='Ex: "Maison avec piscine, 4 chambres, pièce de vie entre 60 et 80m², pas de RDC, DPE max C"' style={S.textarea} rows={3}/>
+          <Sec title="ð¤ Autres critÃ¨res (vocal ou texte)">
+            <div style={{fontSize:12,color:C.textSub,marginBottom:8}}>Dictez les critÃ¨res restants : type de bien, Ã©quipements souhaitÃ©s, tailles de piÃ¨cesâ¦</div>
+            <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder='Ex: "Maison avec piscine, 4 chambres, piÃ¨ce de vie entre 60 et 80mÂ², pas de RDC, DPE max C"' style={S.textarea} rows={3}/>
             <div style={{display:"flex",gap:8,marginTop:8}}>
-              <button onClick={recording?()=>{recRef.current?.stop();setRecording(false);}:startV} style={{...S.voiceBtn,...(recording?S.voiceBtnRec:{})}}>{recording?"⏹ Stop":"🎤 Dicter"}</button>
-              <button onClick={analyser} disabled={!note.trim()&&!budget_max&&!secteurs} style={{...S.analyseBtn,opacity:!note.trim()&&!budget_max&&!secteurs?0.5:1}}>{loading?"⏳…":"✨ IA → Critères"}</button>
+              <button onClick={recording?()=>{recRef.current?.stop();setRecording(false);}:startV} style={{...S.voiceBtn,...(recording?S.voiceBtnRec:{})}}>{recording?"â¹ Stop":"ð¤ Dicter"}</button>
+              <button onClick={analyser} disabled={!note.trim()&&!budget_max&&!secteurs} style={{...S.analyseBtn,opacity:!note.trim()&&!budget_max&&!secteurs?0.5:1}}>{loading?"â³â¦":"â¨ IA â CritÃ¨res"}</button>
             </div>
             {recording&&<RecBar/>}
             {criteres&&<div style={{marginTop:10}}><CriteresGrid c={criteres}/></div>}
           </Sec>
           <div style={{padding:"0 16px 32px"}}>
-            <button onClick={sauvegarder} disabled={!nom} style={{...S.primaryBtn,opacity:!nom?0.4:1}}>✓ Créer l'acquéreur</button>
+            <button onClick={sauvegarder} disabled={!nom} style={{...S.primaryBtn,opacity:!nom?0.4:1}}>â CrÃ©er l'acquÃ©reur</button>
           </div>
         </>}
       </div>
@@ -1121,7 +1143,7 @@ function NewAcq({ agent, onBack, onSave }) {
   );
 }
 
-// ── NEW BIEN ──────────────────────────────────────────────────────────────────
+// ââ NEW BIEN ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function NewBien({ agent, onBack, onSave }) {
   const [mode,setMode]=useState("pdf");
   const [loading,setLoading]=useState(false);
@@ -1177,13 +1199,13 @@ function NewBien({ agent, onBack, onSave }) {
 
   return (
     <div style={S.si}>
-      <div style={S.dh}><button onClick={onBack} style={S.backBtn}>←</button><div style={S.detailName}>Nouveau bien</div><span style={{...S.tag,background:agent.color}}>{agent.nom}</span></div>
+      <div style={S.dh}><button onClick={onBack} style={S.backBtn}>â</button><div style={S.detailName}>Nouveau bien</div><span style={{...S.tag,background:agent.color}}>{agent.nom}</span></div>
       <div style={S.scroll}>
-        {/* Sélecteur mode */}
+        {/* SÃ©lecteur mode */}
         <div style={{padding:"14px 16px 8px"}}>
           <div style={{fontSize:11,fontWeight:800,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>Comment ajouter ce bien ?</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            {[["pdf","📄 Fiche PDF IAD"],["url","🔗 Lien annonce"],["vocal","🎤 Description vocale"],["manuel","✏️ Saisie manuelle"]].map(([id,lb])=>(
+            {[["pdf","ð Fiche PDF IAD"],["url","ð Lien annonce"],["vocal","ð¤ Description vocale"],["manuel","âï¸ Saisie manuelle"]].map(([id,lb])=>(
               <button key={id} onClick={()=>setMode(id)} style={{background:mode===id?`linear-gradient(135deg,${C.teal},${C.blueLight})`:`${C.teal}08`,border:`1px solid ${mode===id?"transparent":C.teal+"20"}`,borderRadius:12,padding:"12px 8px",color:mode===id?"#fff":C.teal,fontSize:12,fontWeight:700,cursor:"pointer"}}>
                 {lb}
               </button>
@@ -1193,24 +1215,24 @@ function NewBien({ agent, onBack, onSave }) {
 
         {/* MODE PDF */}
         {mode==="pdf"&&(
-          <Sec title="📄 Importer une fiche PDF IAD">
+          <Sec title="ð Importer une fiche PDF IAD">
             <div style={{background:`linear-gradient(135deg,${C.teal}06,${C.blueLight}04)`,border:`1px solid ${C.teal}18`,borderRadius:14,padding:16,marginBottom:12}}>
               <div style={{textAlign:"center",marginBottom:14}}>
-                <div style={{fontSize:40,marginBottom:6}}>📄</div>
+                <div style={{fontSize:40,marginBottom:6}}>ð</div>
                 <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:4}}>Fiche de mandat IAD</div>
-                <div style={{fontSize:12,color:C.textSub,lineHeight:1.6}}>Exportez votre bien depuis votre logiciel IAD → PDF<br/><span style={{color:C.teal}}>L'IA lit toutes les pièces avec leurs mesures exactes.</span></div>
+                <div style={{fontSize:12,color:C.textSub,lineHeight:1.6}}>Exportez votre bien depuis votre logiciel IAD â PDF<br/><span style={{color:C.teal}}>L'IA lit toutes les piÃ¨ces avec leurs mesures exactes.</span></div>
               </div>
               <div onClick={()=>pdfRef.current?.click()} style={{border:`2px dashed ${pdfNom?C.success:C.teal}40`,borderRadius:12,padding:20,textAlign:"center",cursor:"pointer",background:pdfNom?C.success+"06":"rgba(255,255,255,0.7)"}}>
                 {loading?(<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10}}><div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${C.teal}30`,borderTop:`2px solid ${C.teal}`}}/>
-                <div style={{fontSize:13,color:C.teal,fontWeight:600}}>L'IA analyse votre PDF…</div></div>)
-                :pdfNom?(<><div style={{fontSize:28,marginBottom:4}}>✅</div><div style={{fontWeight:700,fontSize:13,color:C.success}}>{pdfNom}</div><div style={{fontSize:11,color:C.textMuted}}>Appuyez pour changer</div></>)
-                :(<><div style={{fontSize:32,marginBottom:6}}>📁</div><div style={{fontWeight:700,fontSize:14,color:C.teal}}>Sélectionner le PDF</div><div style={{fontSize:11,color:C.textMuted}}>Format PDF uniquement</div></>)}
+                <div style={{fontSize:13,color:C.teal,fontWeight:600}}>L'IA analyse votre PDFâ¦</div></div>)
+                :pdfNom?(<><div style={{fontSize:28,marginBottom:4}}>â</div><div style={{fontWeight:700,fontSize:13,color:C.success}}>{pdfNom}</div><div style={{fontSize:11,color:C.textMuted}}>Appuyez pour changer</div></>)
+                :(<><div style={{fontSize:32,marginBottom:6}}>ð</div><div style={{fontWeight:700,fontSize:14,color:C.teal}}>SÃ©lectionner le PDF</div><div style={{fontSize:11,color:C.textMuted}}>Format PDF uniquement</div></>)}
               </div>
               <input ref={pdfRef} type="file" accept="application/pdf" onChange={handlePDF} style={{display:"none"}}/>
             </div>
             {!pdfNom&&<div style={{background:C.white,border:`1px solid ${C.borderDark}`,borderRadius:12,padding:"12px 14px"}}>
               <div style={{fontSize:11,fontWeight:800,color:C.textSub,textTransform:"uppercase",marginBottom:8}}>Depuis votre logiciel IAD :</div>
-              {["1. Ouvrez votre bien dans IAD","2. Cliquez Exporter / Imprimer → PDF","3. Importez ici → l'IA remplit tout ✅"].map((t,i)=>(
+              {["1. Ouvrez votre bien dans IAD","2. Cliquez Exporter / Imprimer â PDF","3. Importez ici â l'IA remplit tout â"].map((t,i)=>(
                 <div key={i} style={{display:"flex",gap:8,marginBottom:6}}>
                   <div style={{width:20,height:20,borderRadius:"50%",background:`linear-gradient(135deg,${C.teal},${C.blueLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#fff",flexShrink:0}}>{i+1}</div>
                   <div style={{fontSize:12,color:C.textSub,paddingTop:2}}>{t.substring(3)}</div>
@@ -1222,14 +1244,14 @@ function NewBien({ agent, onBack, onSave }) {
 
         {/* MODE URL */}
         {mode==="url"&&(
-          <Sec title="🔗 Lien d'une annonce">
+          <Sec title="ð Lien d'une annonce">
             <div style={{background:`linear-gradient(135deg,${C.teal}06,${C.blueLight}04)`,border:`1px solid ${C.teal}18`,borderRadius:14,padding:16,marginBottom:12}}>
               <div style={{textAlign:"center",marginBottom:14}}>
-                <div style={{fontSize:40,marginBottom:6}}>🔗</div>
+                <div style={{fontSize:40,marginBottom:6}}>ð</div>
                 <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:4}}>Importer depuis un lien</div>
                 <div style={{fontSize:12,color:C.textSub,lineHeight:1.6}}>
                   Copiez l'URL d'une annonce depuis :<br/>
-                  <span style={{color:C.teal}}>IAD • SeLoger • Leboncoin • BienIci • PAP • Logic-Immo…</span>
+                  <span style={{color:C.teal}}>IAD â¢ SeLoger â¢ Leboncoin â¢ BienIci â¢ PAP â¢ Logic-Immoâ¦</span>
                 </div>
               </div>
               <input
@@ -1242,95 +1264,95 @@ function NewBien({ agent, onBack, onSave }) {
                 onClick={handleUrl}
                 disabled={!urlInput.trim()||loading}
                 style={{...S.primaryBtn,opacity:!urlInput.trim()||loading?0.5:1}}>
-                {loading?"⏳ L'IA analyse l'annonce…":"✨ Importer ce bien"}
+                {loading?"â³ L'IA analyse l'annonceâ¦":"â¨ Importer ce bien"}
               </button>
             </div>
             <div style={{background:`#fff8e8`,border:"1px solid #fde68a",borderRadius:10,padding:"10px 12px",fontSize:12,color:"#92400e"}}>
-              💡 <b>Si le lien ne fonctionne pas</b>, utilisez <b>📄 Fiche PDF</b> (export depuis IAD) — c'est la méthode la plus fiable.
+              ð¡ <b>Si le lien ne fonctionne pas</b>, utilisez <b>ð Fiche PDF</b> (export depuis IAD) â c'est la mÃ©thode la plus fiable.
             </div>
           </Sec>
         )}
 
         {/* MODE VOCAL */}
         {mode==="vocal"&&(
-          <Sec title="🎤 Description vocale">
-            <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Ex: Maison Montauroux, 620 000€, 151m², 6 pièces, piscine, terrain 957m², DPE A, mandat 2000441…" style={S.textarea} rows={4}/>
+          <Sec title="ð¤ Description vocale">
+            <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Ex: Maison Montauroux, 620 000â¬, 151mÂ², 6 piÃ¨ces, piscine, terrain 957mÂ², DPE A, mandat 2000441â¦" style={S.textarea} rows={4}/>
             <div style={{display:"flex",gap:8,marginTop:8}}>
-              <button onClick={recording?()=>{recRef.current?.stop();setRecording(false);}:startV} style={{...S.voiceBtn,...(recording?S.voiceBtnRec:{})}}>{recording?"⏹ Stop":"🎤 Dicter"}</button>
-              <button onClick={analyseVocal} disabled={!note.trim()||loading} style={{...S.analyseBtn,opacity:!note.trim()||loading?0.5:1}}>{loading?"⏳…":"✨ IA → Fiche"}</button>
+              <button onClick={recording?()=>{recRef.current?.stop();setRecording(false);}:startV} style={{...S.voiceBtn,...(recording?S.voiceBtnRec:{})}}>{recording?"â¹ Stop":"ð¤ Dicter"}</button>
+              <button onClick={analyseVocal} disabled={!note.trim()||loading} style={{...S.analyseBtn,opacity:!note.trim()||loading?0.5:1}}>{loading?"â³â¦":"â¨ IA â Fiche"}</button>
             </div>
             {recording&&<RecBar/>}
           </Sec>
         )}
 
-        {/* RÉSULTAT IMPORT */}
+        {/* RÃSULTAT IMPORT */}
         {imported&&!loading&&(
           <div style={{margin:"0 16px 4px",background:`linear-gradient(135deg,${C.success}10,${C.teal}06)`,border:`2px solid ${C.success}25`,borderRadius:14,padding:14}}>
-            <div style={{fontWeight:800,fontSize:14,color:C.success,marginBottom:8}}>✅ {imported.source||"Bien"} importé {imported.numero_mandat?`— N° ${imported.numero_mandat}`:""}</div>
+            <div style={{fontWeight:800,fontSize:14,color:C.success,marginBottom:8}}>â {imported.source||"Bien"} importÃ© {imported.numero_mandat?`â NÂ° ${imported.numero_mandat}`:""}</div>
             {imported.titre&&<div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:4}}>{imported.titre}</div>}
             <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>
-              {imported.prix&&<span style={S.okTag}>💰 {(imported.prix/1000).toFixed(0)}k€</span>}
-              {imported.surface&&<span style={S.okTag}>🏠 {imported.surface}m²</span>}
-              {imported.surface_terrain&&<span style={S.okTag}>🌿 {imported.surface_terrain}m² terrain</span>}
-              {imported.pieces&&<span style={S.okTag}>🚪 {imported.pieces}p</span>}
-              {imported.chambres&&<span style={S.okTag}>🛏 {imported.chambres} ch.</span>}
-              {imported.dpe&&<span style={S.okTag}>🔋 DPE {imported.dpe}</span>}
+              {imported.prix&&<span style={S.okTag}>ð° {(imported.prix/1000).toFixed(0)}kâ¬</span>}
+              {imported.surface&&<span style={S.okTag}>ð  {imported.surface}mÂ²</span>}
+              {imported.surface_terrain&&<span style={S.okTag}>ð¿ {imported.surface_terrain}mÂ² terrain</span>}
+              {imported.pieces&&<span style={S.okTag}>ðª {imported.pieces}p</span>}
+              {imported.chambres&&<span style={S.okTag}>ð {imported.chambres} ch.</span>}
+              {imported.dpe&&<span style={S.okTag}>ð DPE {imported.dpe}</span>}
             </div>
             {imported.detail_pieces?.length>0&&(
-              <div style={{fontSize:11,color:C.teal,fontWeight:600}}>📐 {imported.detail_pieces.length} pièces détaillées importées</div>
+              <div style={{fontSize:11,color:C.teal,fontWeight:600}}>ð {imported.detail_pieces.length} piÃ¨ces dÃ©taillÃ©es importÃ©es</div>
             )}
-            <div style={{fontSize:11,color:C.textMuted,marginTop:6}}>✏️ Vérifiez et complétez ci-dessous.</div>
+            <div style={{fontSize:11,color:C.textMuted,marginTop:6}}>âï¸ VÃ©rifiez et complÃ©tez ci-dessous.</div>
           </div>
         )}
 
         {/* FICHE */}
-        <Sec title={imported?"✏️ Vérifier et compléter":"Saisie manuelle"}>
+        <Sec title={imported?"âï¸ VÃ©rifier et complÃ©ter":"Saisie manuelle"}>
           <Inp label="Adresse *" val={f.adresse} set={v=>upd({adresse:v})} ph="Montauroux 83440, France"/>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <Inp label="Prix (€) *" val={f.prix} set={v=>upd({prix:v})} ph="620000" type="number"/>
-            <Inp label="Surface hab. (m²) *" val={f.surface} set={v=>upd({surface:v})} ph="151" type="number"/>
-            <Inp label="Terrain (m²)" val={f.surface_terrain} set={v=>upd({surface_terrain:v})} ph="957" type="number"/>
-            <Inp label="Pièces" val={f.pieces} set={v=>upd({pieces:v})} ph="6" type="number"/>
+            <Inp label="Prix (â¬) *" val={f.prix} set={v=>upd({prix:v})} ph="620000" type="number"/>
+            <Inp label="Surface hab. (mÂ²) *" val={f.surface} set={v=>upd({surface:v})} ph="151" type="number"/>
+            <Inp label="Terrain (mÂ²)" val={f.surface_terrain} set={v=>upd({surface_terrain:v})} ph="957" type="number"/>
+            <Inp label="PiÃ¨ces" val={f.pieces} set={v=>upd({pieces:v})} ph="6" type="number"/>
             <Inp label="Chambres" val={f.chambres} set={v=>upd({chambres:v})} ph="4" type="number"/>
             <Inp label="SDB" val={f.salles_de_bain} set={v=>upd({salles_de_bain:v})} ph="3" type="number"/>
-            <Inp label="Année constr." val={f.annee_construction} set={v=>upd({annee_construction:v})} ph="2010" type="number"/>
-            <Inp label="Taxe foncière €" val={f.taxe_fonciere} set={v=>upd({taxe_fonciere:v})} ph="2220" type="number"/>
-            <Inp label="N° mandat" val={f.numero_mandat} set={v=>upd({numero_mandat:v})} ph="2000441"/>
+            <Inp label="AnnÃ©e constr." val={f.annee_construction} set={v=>upd({annee_construction:v})} ph="2010" type="number"/>
+            <Inp label="Taxe fonciÃ¨re â¬" val={f.taxe_fonciere} set={v=>upd({taxe_fonciere:v})} ph="2220" type="number"/>
+            <Inp label="NÂ° mandat" val={f.numero_mandat} set={v=>upd({numero_mandat:v})} ph="2000441"/>
             <div style={S.ig}><label style={S.lbl}>Type</label><select value={f.type} onChange={e=>upd({type:e.target.value})} style={S.select}>{["Appartement","Maison","Studio","Terrain"].map(t=><option key={t}>{t}</option>)}</select></div>
             <div style={S.ig}><label style={S.lbl}>DPE</label><select value={f.dpe} onChange={e=>upd({dpe:e.target.value})} style={S.select}>{["A","B","C","D","E","F","G"].map(d=><option key={d}>{d}</option>)}</select></div>
           </div>
-          <div style={{fontSize:11,fontWeight:700,color:C.textSub,textTransform:"uppercase",marginBottom:8,marginTop:4}}>Équipements</div>
+          <div style={{fontSize:11,fontWeight:700,color:C.textSub,textTransform:"uppercase",marginBottom:8,marginTop:4}}>Ãquipements</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-            {[["piscine","🏊 Piscine"],["jardin","🌿 Jardin"],["terrasse","☀️ Terrasse"],["garage","🚗 Garage"],["parking","🅿️ Parking"]].map(([k,lb])=>(
+            {[["piscine","ð Piscine"],["jardin","ð¿ Jardin"],["terrasse","âï¸ Terrasse"],["garage","ð Garage"],["parking","ð¿ï¸ Parking"]].map(([k,lb])=>(
               <button key={k} onClick={()=>upd({[k]:!f[k]})} style={{...S.toggleChip,...(f[k]?{background:`${C.teal}15`,border:`1px solid ${C.teal}40`,color:C.teal}:{})}}>{lb}</button>
             ))}
           </div>
         </Sec>
 
         <div style={{padding:"12px 16px 32px"}}>
-          <button onClick={sauvegarder} disabled={!f.adresse||!f.prix||!f.surface} style={{...S.primaryBtn,opacity:!f.adresse||!f.prix||!f.surface?0.4:1}}>✓ Enregistrer le bien</button>
+          <button onClick={sauvegarder} disabled={!f.adresse||!f.prix||!f.surface} style={{...S.primaryBtn,opacity:!f.adresse||!f.prix||!f.surface?0.4:1}}>â Enregistrer le bien</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ── ÉQUIPE ─────────────────────────────────────────────────────────────────────
+// ââ ÃQUIPE âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function EquipeView({ agents, acquereurs, biens, agent, enAttente, onApprouver, onRefuser, onUpdateAgent }) {
   const isDir=agent.role==="Directeur";
   return (
     <div style={S.si}>
-      <div style={{padding:"14px 16px 8px",fontWeight:800,fontSize:16,color:C.text}}>👥 Mon équipe</div>
+      <div style={{padding:"14px 16px 8px",fontWeight:800,fontSize:16,color:C.text}}>ð¥ Mon Ã©quipe</div>
       {isDir&&enAttente.length>0&&(
         <div style={{padding:"0 16px 8px"}}>
           <div style={{background:"#fffbeb",border:"1px solid #fde047",borderRadius:14,padding:14}}>
-            <div style={{fontWeight:800,fontSize:13,color:"#713f12",marginBottom:10}}>⏳ {enAttente.length} demande{enAttente.length>1?"s":""} en attente</div>
+            <div style={{fontWeight:800,fontSize:13,color:"#713f12",marginBottom:10}}>â³ {enAttente.length} demande{enAttente.length>1?"s":""} en attente</div>
             {enAttente.map(a=>(
               <div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid #fde04760"}}>
                 <Avatar photo={a.photo} initiale={a.avatar} color={a.color} size={36}/>
                 <div style={{flex:1}}><div style={{fontWeight:700,fontSize:13}}>{a.nom} {a.prenom}</div><div style={{fontSize:11,color:C.textSub}}>{a.role}</div></div>
-                <button onClick={()=>onApprouver(a.id)} style={{background:C.success,border:"none",borderRadius:8,padding:"6px 10px",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",marginRight:4}}>✓</button>
-                <button onClick={()=>onRefuser(a.id)} style={{background:"#fef2f2",border:`1px solid ${C.danger}`,borderRadius:8,padding:"6px 10px",color:C.danger,fontSize:11,fontWeight:700,cursor:"pointer"}}>✗</button>
+                <button onClick={()=>onApprouver(a.id)} style={{background:C.success,border:"none",borderRadius:8,padding:"6px 10px",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",marginRight:4}}>â</button>
+                <button onClick={()=>onRefuser(a.id)} style={{background:"#fef2f2",border:`1px solid ${C.danger}`,borderRadius:8,padding:"6px 10px",color:C.danger,fontSize:11,fontWeight:700,cursor:"pointer"}}>â</button>
               </div>
             ))}
           </div>
@@ -1368,13 +1390,13 @@ function EquipeView({ agents, acquereurs, biens, agent, enAttente, onApprouver, 
   );
 }
 
-// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+// ââ NOTIFICATIONS âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function NotifsView({ notifs, agents, enAttente, onApprouver, onRefuser, onRead, onReadAll }) {
   const unread=notifs.filter(n=>!n.lu).length;
   return (
     <div style={S.si}>
       <div style={{...S.listTop,justifyContent:"space-between"}}>
-        <div style={{fontWeight:800,fontSize:16,color:C.text}}>🔔 Notifications</div>
+        <div style={{fontWeight:800,fontSize:16,color:C.text}}>ð Notifications</div>
         {unread>0&&<button onClick={onReadAll} style={{background:"none",border:"none",color:C.teal,fontSize:12,fontWeight:700,cursor:"pointer"}}>Tout lire</button>}
       </div>
       <div style={S.scroll}>
@@ -1382,11 +1404,11 @@ function NotifsView({ notifs, agents, enAttente, onApprouver, onRefuser, onRead,
           <div key={a.id} style={{...S.notifCard,borderLeft:`3px solid ${C.gold}`,background:"#fffbeb"}}>
             <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
               <Avatar photo={a.photo} initiale={a.avatar} color={a.color} size={32}/>
-              <div style={{flex:1}}><div style={{fontWeight:800,fontSize:13,color:C.text,marginBottom:2}}>🆕 {a.nom} {a.prenom} demande à rejoindre l'agence</div><div style={{fontSize:11,color:C.textSub}}>{a.role} • {a.dateInscription}</div></div>
+              <div style={{flex:1}}><div style={{fontWeight:800,fontSize:13,color:C.text,marginBottom:2}}>ð {a.nom} {a.prenom} demande Ã  rejoindre l'agence</div><div style={{fontSize:11,color:C.textSub}}>{a.role} â¢ {a.dateInscription}</div></div>
             </div>
             <div style={{display:"flex",gap:8,marginTop:10}}>
-              <button onClick={()=>onApprouver(a.id)} style={{flex:1,background:C.success,border:"none",borderRadius:8,padding:"9px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ Approuver</button>
-              <button onClick={()=>onRefuser(a.id)} style={{flex:1,background:"#fef2f2",border:`1px solid ${C.danger}`,borderRadius:8,padding:"9px",color:C.danger,fontSize:13,fontWeight:700,cursor:"pointer"}}>✗ Refuser</button>
+              <button onClick={()=>onApprouver(a.id)} style={{flex:1,background:C.success,border:"none",borderRadius:8,padding:"9px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>â Approuver</button>
+              <button onClick={()=>onRefuser(a.id)} style={{flex:1,background:"#fef2f2",border:`1px solid ${C.danger}`,borderRadius:8,padding:"9px",color:C.danger,fontSize:13,fontWeight:700,cursor:"pointer"}}>â Refuser</button>
             </div>
           </div>
         ))}
@@ -1396,11 +1418,11 @@ function NotifsView({ notifs, agents, enAttente, onApprouver, onRefuser, onRead,
           return (
             <div key={n.id} onClick={()=>onRead(n.id)} style={{...S.notifCard,...(!n.lu?{borderLeft:`3px solid ${C.teal}`,background:"#f0fdfa"}:{})}}>
               <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-                <div style={{width:32,height:32,borderRadius:10,background:n.type==="approuve"?C.success:from?.color||C.teal,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#fff",fontWeight:800,flexShrink:0}}>{n.type==="approuve"?"✅":from?.avatar||"?"}</div>
+                <div style={{width:32,height:32,borderRadius:10,background:n.type==="approuve"?C.success:from?.color||C.teal,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#fff",fontWeight:800,flexShrink:0}}>{n.type==="approuve"?"â":from?.avatar||"?"}</div>
                 <div style={{flex:1}}><div style={{fontWeight:n.lu?600:800,fontSize:13,color:C.text,marginBottom:2}}>{n.msg}</div><div style={{fontSize:11,color:C.textMuted}}>{n.date}</div></div>
                 {!n.lu&&<div style={{width:8,height:8,borderRadius:"50%",background:C.teal,flexShrink:0,marginTop:4}}/>}
               </div>
-              {n.lu&&<div style={{fontSize:11,color:C.textMuted,marginTop:4}}>✓ Lu</div>}
+              {n.lu&&<div style={{fontSize:11,color:C.textMuted,marginTop:4}}>â Lu</div>}
             </div>
           );
         })}
@@ -1409,13 +1431,13 @@ function NotifsView({ notifs, agents, enAttente, onApprouver, onRefuser, onRead,
   );
 }
 
-// ── MICRO-COMPOSANTS ──────────────────────────────────────────────────────────
+// ââ MICRO-COMPOSANTS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function MiseEnRelation({ isOwnAcq, isOwnBien, acqAgent, bienAgent, onSend }) {
   const [sent,setSent]=useState(false);
-  if (sent) return <div style={S.ownTag}>✅ Notification envoyée dans l'app</div>;
+  if (sent) return <div style={S.ownTag}>â Notification envoyÃ©e dans l'app</div>;
   const toId=!isOwnAcq?acqAgent?.id:bienAgent?.id;
-  const label=!isOwnAcq?`Demander mise en relation à ${acqAgent?.nom}`:`Contacter ${bienAgent?.nom}`;
-  return <button onClick={()=>{onSend(toId,"Demande de mise en relation");setSent(true);}} style={{width:"100%",background:`linear-gradient(135deg,${C.teal},${C.blueLight})`,border:"none",borderRadius:9,padding:"9px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>🔗 {label}</button>;
+  const label=!isOwnAcq?`Demander mise en relation Ã  ${acqAgent?.nom}`:`Contacter ${bienAgent?.nom}`;
+  return <button onClick={()=>{onSend(toId,"Demande de mise en relation");setSent(true);}} style={{width:"100%",background:`linear-gradient(135deg,${C.teal},${C.blueLight})`,border:"none",borderRadius:9,padding:"9px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>ð {label}</button>;
 }
 
 const Sec=({title,children,action})=>(<div style={{padding:"14px 16px 4px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,paddingBottom:6,borderBottom:`1px solid ${C.borderDark}`}}><span style={{fontSize:11,fontWeight:800,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.08em"}}>{title}</span>{action}</div>{children}</div>);
@@ -1426,22 +1448,22 @@ const Chip=({children})=><span style={{background:`${C.teal}12`,color:C.teal,bor
 const MiniStat=({val,lbl,col})=><div style={{textAlign:"center"}}><div style={{fontSize:13,fontWeight:800,color:col}}>{val}</div><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase"}}>{lbl}</div></div>;
 const StatBox=({val,lbl,col})=><div style={{background:col+"10",borderRadius:10,padding:"10px 6px",textAlign:"center",border:`1px solid ${col}18`}}><div style={{fontSize:15,fontWeight:900,color:col}}>{val}</div><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",marginTop:1}}>{lbl}</div></div>;
 const ScoreCircle=({score})=>{const col=score>=70?C.success:score>=50?C.warning:C.textMuted;return<div style={{width:42,height:42,borderRadius:"50%",background:col,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 2px 8px ${col}40`}}><div style={{fontSize:12,fontWeight:900,color:"#fff"}}>{score}</div><div style={{fontSize:7,color:"rgba(255,255,255,0.7)"}}>%</div></div>;};
-const RecBar=()=><div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:C.danger,marginTop:6}}><span style={{width:8,height:8,borderRadius:"50%",background:C.danger,display:"inline-block"}}/>Enregistrement…</div>;
+const RecBar=()=><div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:C.danger,marginTop:6}}><span style={{width:8,height:8,borderRadius:"50%",background:C.danger,display:"inline-block"}}/>Enregistrementâ¦</div>;
 function CriteresGrid({c}) {
-  const chips=[c.budget_max&&{lb:"Budget max",v:`${(c.budget_max/1000).toFixed(0)}k€`,col:C.success},c.budget_min&&{lb:"min",v:`${(c.budget_min/1000).toFixed(0)}k€`,col:C.success},c.type&&{lb:"Type",v:c.type,col:C.teal},c.pieces_min&&{lb:"Pièces",v:`≥${c.pieces_min}p`,col:"#7c3aed"},c.chambres_min&&{lb:"Chambres",v:`≥${c.chambres_min}`,col:"#db2777"},c.surface_min&&{lb:"Surface",v:`≥${c.surface_min}m²`,col:C.gold},c.surface_terrain_min&&{lb:"Terrain",v:`≥${c.surface_terrain_min}m²`,col:"#16a34a"},c.dpe_max&&{lb:"DPE max",v:c.dpe_max,col:C.success},...(c.villes||[]).map(v=>({lb:"Secteur",v,col:"#db2777"})),...(c.exigences||[]).map(e=>({lb:"✓",v:e,col:C.success})),...(c.exclusions||[]).map(e=>({lb:"✗",v:e,col:C.danger}))].filter(Boolean);
+  const chips=[c.budget_max&&{lb:"Budget max",v:`${(c.budget_max/1000).toFixed(0)}kâ¬`,col:C.success},c.budget_min&&{lb:"min",v:`${(c.budget_min/1000).toFixed(0)}kâ¬`,col:C.success},c.type&&{lb:"Type",v:c.type,col:C.teal},c.pieces_min&&{lb:"PiÃ¨ces",v:`â¥${c.pieces_min}p`,col:"#7c3aed"},c.chambres_min&&{lb:"Chambres",v:`â¥${c.chambres_min}`,col:"#db2777"},c.surface_min&&{lb:"Surface",v:`â¥${c.surface_min}mÂ²`,col:C.gold},c.surface_terrain_min&&{lb:"Terrain",v:`â¥${c.surface_terrain_min}mÂ²`,col:"#16a34a"},c.dpe_max&&{lb:"DPE max",v:c.dpe_max,col:C.success},...(c.villes||[]).map(v=>({lb:"Secteur",v,col:"#db2777"})),...(c.exigences||[]).map(e=>({lb:"â",v:e,col:C.success})),...(c.exclusions||[]).map(e=>({lb:"â",v:e,col:C.danger}))].filter(Boolean);
   return (
     <div style={{background:`linear-gradient(135deg,${C.teal}06,${C.blueLight}04)`,border:`1px solid ${C.teal}18`,borderRadius:12,padding:"10px 12px"}}>
-      {c.resume&&<div style={{fontSize:12,color:C.teal,fontStyle:"italic",marginBottom:8}}>💡 {c.resume}</div>}
+      {c.resume&&<div style={{fontSize:12,color:C.teal,fontStyle:"italic",marginBottom:8}}>ð¡ {c.resume}</div>}
       <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:c.criteres_pieces?.length?8:0}}>
         {chips.map((ch,i)=><div key={i} style={{background:ch.col+"15",border:`1px solid ${ch.col}35`,borderRadius:8,padding:"3px 9px",fontSize:11,fontWeight:600,color:ch.col}}><span style={{opacity:0.6,fontSize:10}}>{ch.lb} </span>{ch.v}</div>)}
       </div>
       {c.criteres_pieces?.length>0&&(
         <div style={{borderTop:`1px solid ${C.teal}12`,paddingTop:8}}>
-          <div style={{fontSize:10,fontWeight:800,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>📐 Critères par pièce</div>
+          <div style={{fontSize:10,fontWeight:800,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>ð CritÃ¨res par piÃ¨ce</div>
           {c.criteres_pieces.map((cp,i)=>(
             <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
               <span style={{color:C.text,fontWeight:600}}>{cp.nom}</span>
-              <span style={{color:C.teal,fontWeight:700,background:`${C.teal}10`,borderRadius:6,padding:"2px 8px"}}>{cp.surface_min&&cp.surface_max?`${cp.surface_min}–${cp.surface_max}m²`:cp.surface_min?`≥${cp.surface_min}m²`:cp.surface_max?`≤${cp.surface_max}m²`:"libre"}</span>
+              <span style={{color:C.teal,fontWeight:700,background:`${C.teal}10`,borderRadius:6,padding:"2px 8px"}}>{cp.surface_min&&cp.surface_max?`${cp.surface_min}â${cp.surface_max}mÂ²`:cp.surface_min?`â¥${cp.surface_min}mÂ²`:cp.surface_max?`â¤${cp.surface_max}mÂ²`:"libre"}</span>
             </div>
           ))}
         </div>
@@ -1450,7 +1472,7 @@ function CriteresGrid({c}) {
   );
 }
 
-// ── STYLES ────────────────────────────────────────────────────────────────────
+// ââ STYLES ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const S={
   shell:{minHeight:"100vh",background:"linear-gradient(135deg,#c8e6f0,#e8f4f8 50%,#d4eaf0)",display:"flex",alignItems:"center",justifyContent:"center",padding:16,fontFamily:"'Outfit','Segoe UI',sans-serif"},
   phone:{width:"100%",maxWidth:390,minHeight:780,borderRadius:36,overflow:"hidden",boxShadow:"0 40px 80px rgba(10,61,98,0.25),0 0 0 1px rgba(255,255,255,0.5)",display:"flex",flexDirection:"column",position:"relative"},
