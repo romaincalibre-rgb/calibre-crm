@@ -1,13 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 
-// ── SUPABASE ──────────────────────────────────────────────────────────────────
 const SUPA_URL="https://wzygqvtexcyamoqayidf.supabase.co";
 const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6eWdxdnRleGN5YW1vcWF5aWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDczMzgsImV4cCI6MjA5NTYyMzMzOH0.fvQO5s7-XH9DxzHfWzDBqLbtqbIJ7Tp1h2c_IdsP-a4";
 const SH={"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":"Bearer "+SUPA_KEY};
-const db={
-  async get(t){try{const r=await fetch(SUPA_URL+"/rest/v1/"+t+"?order=created_at.asc",{headers:SH});return await r.json();}catch{return [];}},
-  async upsert(t,d){try{await fetch(SUPA_URL+"/rest/v1/"+t,{method:"POST",headers:{...SH,"Prefer":"resolution=merge-duplicates"},body:JSON.stringify(d)});}catch{}}
-};
+const db={async get(t){try{const r=await fetch(SUPA_URL+"/rest/v1/"+t+"?order=created_at.asc",{headers:SH});return await r.json();}catch{return [];}},async upsert(t,d){try{await fetch(SUPA_URL+"/rest/v1/"+t,{method:"POST",headers:{...SH,"Prefer":"resolution=merge-duplicates"},body:JSON.stringify(d)});}catch{}}};
 const getLS=()=>{try{return localStorage.getItem("cal_v8_s");}catch{return null;}};
 const setLS=(id)=>{try{localStorage.setItem("cal_v8_s",id||"");}catch{}};
 
@@ -338,49 +334,37 @@ export default function App() {
   const [appLoading,setAppLoading]=useState(true);
   const [authScreen, setAuthScreen] = useState("login");
 
-  useEffect(()=>{
-    const charger=async()=>{
-      const[ag,acq,bi,no]=await Promise.all([db.get("agents"),db.get("acquereurs"),db.get("biens"),db.get("notifications")]);
-      if(ag&&ag.length)setAgents(ag.map(a=>({...a,agentId:a.agent_id,dateInscription:a.date_inscription,biens_visites:a.biens_visites||[],criteres:a.criteres||{}})));
-      if(acq&&acq.length)setAcquereurs(acq.map(a=>({...a,agentId:a.agent_id,biens_visites:a.biens_visites||[],criteres:a.criteres||{}})));
-      if(bi&&bi.length)setBiens(bi.map(b=>({...b,agentId:b.agent_id,caracteristiques:b.caracteristiques||[],detail_pieces:b.detail_pieces||[],surfaces_annexes:b.surfaces_annexes||[]})));
-      if(no&&no.length)setNotifs(no.map(n=>({...n,toAgentId:n.to_agent_id,fromAgentId:n.from_agent_id})));
-      setAppLoading(false);
-    };
-    charger();
-    const t=setInterval(charger,8000);
-    return()=>clearInterval(t);
-  },[]);
+  useEffect(()=>{const load=async()=>{const[ag,acq,bi,no]=await Promise.all([db.get("agents"),db.get("acquereurs"),db.get("biens"),db.get("notifications")]);if(ag&&ag.length)setAgents(ag.map(a=>({...a,agentId:a.agent_id,dateInscription:a.date_inscription,biens_visites:a.biens_visites||[],criteres:a.criteres||{}})));if(acq&&acq.length)setAcquereurs(acq.map(a=>({...a,agentId:a.agent_id,biens_visites:a.biens_visites||[],criteres:a.criteres||{}})));if(bi&&bi.length)setBiens(bi.map(b=>({...b,agentId:b.agent_id,caracteristiques:b.caracteristiques||[],detail_pieces:b.detail_pieces||[],surfaces_annexes:b.surfaces_annexes||[]})));if(no&&no.length)setNotifs(no.map(n=>({...n,toAgentId:n.to_agent_id,fromAgentId:n.from_agent_id})));setAppLoading(false);};load();const t=setInterval(load,8000);return()=>clearInterval(t);},[]);
 
   const agentCo=sessionId?agents.find(a=>a.id===sessionId):null;
   const enAttente = agents.filter(a=>a.statut==="en_attente");
 
   const inscrire = async data => {
     const na={...data,id:Date.now().toString(),color:getColor(agents.length),avatar:getInitiale(data.nom),statut:"en_attente",photo:null,dateInscription:new Date().toISOString().split("T")[0]};
-    await db.upsert("agents",{id:na.id,nom:na.nom,prenom:na.prenom||"" ,role:na.role,color:na.color,avatar:na.avatar,statut:na.statut,photo:null,date_inscription:na.dateInscription});
+    await db.upsert("agents",{id:na.id,nom:na.nom,prenom:na.prenom||"",role:na.role,color:na.color,avatar:na.avatar,statut:na.statut,photo:null,date_inscription:na.dateInscription});
     setAgents(l=>[...l,na]);
     const dirId=agents.find(a=>a.role==="Directeur")?.id||"romain";
     setNotifs(ns=>[{id:Date.now(),type:"inscription",toAgentId:dirId,fromAgentId:na.id,msg:`🆕 ${na.nom} ${na.prenom} (${na.role}) demande à rejoindre l'agence`,lu:false,date:new Date().toLocaleString("fr-FR")},...ns]);
-    setLS(na.id);setSessionId(na.id);setAuthScreen("pending");
+    setLS(na.id); setSessionId(na.id); setAuthScreen("pending");
   };
-  const approuver=async id=>{await db.upsert("agents",{id,statut:"approuve"});const n={id:Date.now().toString(),type:"approuve",to_agent_id:id,from_agent_id:"",msg:"✅ Votre compte a été approuvé ! Bienvenue dans l'équipe Calibre.",lu:false,date:new Date().toLocaleString("fr-FR")};await db.upsert("notifications",n);setAgents(l=>l.map(a=>a.id===id?{...a,statut:"approuve"}:a));setNotifs(ns=>[{...n,toAgentId:id,fromAgentId:""},...ns]);};
+  const approuver=async id=>{await db.upsert("agents",{id,statut:"approuve"});const n={id:Date.now().toString(),type:"approuve",to_agent_id:id,msg:"✅ Votre compte a été approuvé ! Bienvenue dans l'équipe.",lu:false,date:new Date().toLocaleString("fr-FR")};await db.upsert("notifications",n);setAgents(l=>l.map(a=>a.id===id?{...a,statut:"approuve"}:a));setNotifs(ns=>[{...n,toAgentId:id,fromAgentId:""},...ns]);};
   const refuser=async id=>{await db.upsert("agents",{id,statut:"refuse"});setAgents(l=>l.map(a=>a.id===id?{...a,statut:"refuse"}:a));};
-  const sendNotif=async(from,toId,msg)=>{const n={id:Date.now().toString(),type:"message",to_agent_id:toId,from_agent_id:from.id,msg,lu:false,date:new Date().toLocaleString("fr-FR")};await db.upsert("notifications",n);setNotifs(ns=>[{...n,toAgentId:toId,fromAgentId:from.id},...ns]);};
-  const updateAgent=async u=>{await db.upsert("agents",{id:u.id,nom:u.nom,prenom:u.prenom||"" ,role:u.role,color:u.color,avatar:u.avatar,statut:u.statut,photo:u.photo||null,date_inscription:u.dateInscription||""});setAgents(l=>l.map(a=>a.id===u.id?u:a));};
+  const sendNotif=async(from,toId,msg)=>{const n={id:Date.now().toString(),to_agent_id:toId,from_agent_id:from.id,msg,lu:false,date:new Date().toLocaleString("fr-FR")};await db.upsert("notifications",n);setNotifs(ns=>[{...n,toAgentId:toId,fromAgentId:from.id},...ns]);};
+  const updateAgent=async u=>{await db.upsert("agents",{id:u.id,nom:u.nom,prenom:u.prenom||"",role:u.role,color:u.color,avatar:u.avatar,statut:u.statut,photo:u.photo||null,date_inscription:u.dateInscription||""});setAgents(l=>l.map(a=>a.id===u.id?u:a));};
 
   if(appLoading)return(<div style={S.shell}><div style={S.phone}><div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(160deg,#0a3d62,#0d7a8a)"}}><div style={{fontSize:56}}>🏠</div><div style={{fontSize:22,fontWeight:900,color:"#fff",marginTop:8}}>Calibre</div><div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginTop:4}}>Synchronisation...</div></div></div></div>);
   if (!agentCo) {
     if (authScreen==="signup") return <SignupScreen onBack={()=>setAuthScreen("login")} onInscrire={inscrire}/>;
     if (authScreen==="pending") {
       const me=session?agents.find(a=>a.id===session):null;
-      if (me?.statut!=="approuve") return <PendingScreen nom={me?.nom} onLogout={()=>{setLS(null);setSessionId(null);setAuthScreen("login");}}/>;
+      if (me?.statut!=="approuve") return <PendingScreen nom={me?.nom} onLogout={()=>(setSessionId(null)||setAuthScreen("login"))}/>;
     }
-    return <LoginScreen agents={agents.filter(a=>a.statut==="approuve")} onLogin={id=>setLS(id);setSessionId(id)} onSignup={()=>setAuthScreen("signup")}/>;
+    return <LoginScreen agents={agents.filter(a=>a.statut==="approuve")} onLogin={id=>setSessionId(id)} onSignup={()=>setAuthScreen("signup")}/>;
   }
-  if (agentCo.statut==="en_attente") return <PendingScreen nom={agentCo.nom} onLogout={()=>{setLS(null);setSessionId(null);setAuthScreen("login");}}/>;
-  if (agentCo.statut==="refuse") return <div style={S.shell}><div style={S.phone}><div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,textAlign:"center"}}><div style={{fontSize:56,marginBottom:16}}>❌</div><div style={{fontSize:20,fontWeight:900,color:C.danger}}>Accès refusé</div><button onClick={()=>{setLS(null);setSessionId(null);setAuthScreen("login");}} style={{...S.primaryBtn,marginTop:24}}>Retour</button></div></div></div>;
+  if (agentCo.statut==="en_attente") return <PendingScreen nom={agentCo.nom} onLogout={()=>(setSessionId(null)||setAuthScreen("login"))}/>;
+  if (agentCo.statut==="refuse") return <div style={S.shell}><div style={S.phone}><div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,textAlign:"center"}}><div style={{fontSize:56,marginBottom:16}}>❌</div><div style={{fontSize:20,fontWeight:900,color:C.danger}}>Accès refusé</div><button onClick={()=>(setSessionId(null)||setAuthScreen("login"))} style={{...S.primaryBtn,marginTop:24}}>Retour</button></div></div></div>;
 
-  return <CRMApp agent={agentCo} agents={agents.filter(a=>a.statut==="approuve")} acquereurs={acquereurs} setAcquereurs={setAcquereurs} biens={biens} setBiens={setBiens} notifs={notifs} setNotifs={setNotifs} enAttente={enAttente} onApprouver={approuver} onRefuser={refuser} onLogout={()=>{setLS(null);setSessionId(null);setAuthScreen("login");}} onNotif={sendNotif} onUpdateAgent={updateAgent}/>;
+  return <CRMApp agent={agentCo} agents={agents.filter(a=>a.statut==="approuve")} acquereurs={acquereurs} setAcquereurs={setAcquereurs} biens={biens} setBiens={setBiens} notifs={notifs} setNotifs={setNotifs} enAttente={enAttente} onApprouver={approuver} onRefuser={refuser} onLogout={()=>(setSessionId(null)||setAuthScreen("login"))} onNotif={sendNotif} onUpdateAgent={updateAgent}/>;
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
@@ -531,11 +515,11 @@ function CRMApp({ agent, agents, acquereurs, setAcquereurs, biens, setBiens, not
 
         <div style={{flex:1,background:C.bg,margin:"0 12px",borderRadius:"0 0 14px 14px",overflow:"hidden",display:"flex",flexDirection:"column"}}>
           {nav==="acquereurs"&&cur.screen==="list"&&<AcqList acquereurs={acquereurs} biens={biens} agents={agents} agent={agent} onSelect={a=>push({screen:"detail",id:a.id})} onNew={()=>push({screen:"new"})}/>}
-          {nav==="acquereurs"&&cur.screen==="detail"&&<AcqDetail acq={acquereurs.find(a=>a.id===cur.id)} biens={biens} agents={agents} agent={agent} onBack={pop} onUpdate={async a=>{await db.upsert("acquereurs",{id:a.id,agent_id:a.agentId,nom:a.nom,prenom:a.prenom||"" ,tel:a.tel||"" ,email:a.email||"" ,photo:a.photo||null,stage:a.stage||"nouveau",qualification:a.qualification||null,note_brute:a.note_brute||"" ,criteres:a.criteres||{},situation:a.situation||"" ,nb_enfants:a.nb_enfants||0,metier_m:a.metier_m||"" ,secteur_travail_m:a.secteur_travail_m||"" ,metier_f:a.metier_f||"" ,secteur_travail_f:a.secteur_travail_f||"" ,notes_profil:a.notes_profil||"" ,biens_visites:a.biens_visites||[],alerte:a.alerte||false,date:a.date||""});setAcquereurs(l=>l.map(x=>x.id===a.id?a:x));}} onNotif={onNotif}/>}
-          {nav==="acquereurs"&&cur.screen==="new"&&<NewAcq agent={agent} onBack={pop} onSave={async a=>{const na={...a,id:Date.now().toString(),biens_visites:[],alerte:false,date:new Date().toISOString().split("T")[0]};await db.upsert("acquereurs",{id:na.id,agent_id:na.agentId,nom:na.nom,prenom:na.prenom||"" ,tel:na.tel||"" ,email:na.email||"" ,photo:na.photo||null,stage:na.stage||"nouveau",note_brute:na.note_brute||"" ,criteres:na.criteres||{},situation:na.situation||"" ,nb_enfants:na.nb_enfants||0,metier_m:na.metier_m||"" ,metier_f:na.metier_f||"" ,biens_visites:[],alerte:false,date:na.date});setAcquereurs(l=>[...l,na]);pop();}}/>}
+          {nav==="acquereurs"&&cur.screen==="detail"&&<AcqDetail acq={acquereurs.find(a=>a.id===cur.id)} biens={biens} agents={agents} agent={agent} onBack={pop} onUpdate={async a=>{await db.upsert("acquereurs",{id:a.id,agent_id:a.agentId,nom:a.nom||"",prenom:a.prenom||"",tel:a.tel||"",email:a.email||"",photo:a.photo||null,stage:a.stage||"nouveau",qualification:a.qualification||null,note_brute:a.note_brute||"",criteres:a.criteres||{},situation:a.situation||"",nb_enfants:a.nb_enfants||0,metier_m:a.metier_m||"",metier_f:a.metier_f||"",notes_profil:a.notes_profil||"",biens_visites:a.biens_visites||[],alerte:a.alerte||false,date:a.date||""});setAcquereurs(l=>l.map(x=>x.id===a.id?a:x));}} onNotif={onNotif}/>}
+          {nav==="acquereurs"&&cur.screen==="new"&&<NewAcq agent={agent} onBack={pop} onSave={async a=>{const na={...a,id:Date.now().toString(),biens_visites:[],alerte:false,date:new Date().toISOString().split("T")[0]};await db.upsert("acquereurs",{id:na.id,agent_id:na.agentId,nom:na.nom||"",prenom:na.prenom||"",tel:na.tel||"",email:na.email||"",photo:null,stage:na.stage||"nouveau",criteres:na.criteres||{},biens_visites:[],alerte:false,date:na.date});setAcquereurs(l=>[...l,na]);pop();}}/>}
           {nav==="biens"&&cur.screen==="list"&&<BienList biens={biens} acquereurs={acquereurs} agents={agents} agent={agent} onSelect={b=>push({screen:"detail",id:b.id})} onNew={()=>push({screen:"new"})}/>}
           {nav==="biens"&&cur.screen==="detail"&&<BienDetail bien={biens.find(b=>b.id===cur.id)} acquereurs={acquereurs} agents={agents} agent={agent} onBack={pop} onNotif={onNotif}/>}
-          {nav==="biens"&&cur.screen==="new"&&<NewBien agent={agent} onBack={pop} onSave={async b=>{const nb={...b,id:Date.now().toString(),date:new Date().toISOString().split("T")[0],statut:"disponible"};await db.upsert("biens",{id:nb.id,agent_id:nb.agentId,adresse:nb.adresse||"" ,ville:nb.ville||"" ,code_postal:nb.code_postal||"" ,type:nb.type||"Maison",prix:nb.prix||0,surface:nb.surface||0,surface_terrain:nb.surface_terrain||0,pieces:nb.pieces||0,chambres:nb.chambres||0,salles_de_bain:nb.salles_de_bain||0,etage:nb.etage||0,annee_construction:nb.annee_construction||0,taxe_fonciere:nb.taxe_fonciere||0,numero_mandat:nb.numero_mandat||"" ,dpe:nb.dpe||"" ,description:nb.description||"" ,caracteristiques:nb.caracteristiques||[],detail_pieces:nb.detail_pieces||[],surfaces_annexes:nb.surfaces_annexes||[],piscine:nb.piscine||false,jardin:nb.jardin||false,terrasse:nb.terrasse||false,garage:nb.garage||false,parking:nb.parking||false,statut:"disponible",date:nb.date});setBiens(l=>[...l,nb]);pop();}}/>}
+          {nav==="biens"&&cur.screen==="new"&&<NewBien agent={agent} onBack={pop} onSave={async b=>{const nb={...b,id:Date.now().toString(),date:new Date().toISOString().split("T")[0],statut:"disponible"};await db.upsert("biens",{id:nb.id,agent_id:nb.agentId,adresse:nb.adresse||"",ville:nb.ville||"",type:nb.type||"Maison",prix:nb.prix||0,surface:nb.surface||0,surface_terrain:nb.surface_terrain||0,pieces:nb.pieces||0,chambres:nb.chambres||0,dpe:nb.dpe||"",description:nb.description||"",caracteristiques:nb.caracteristiques||[],detail_pieces:nb.detail_pieces||[],surfaces_annexes:nb.surfaces_annexes||[],piscine:nb.piscine||false,jardin:nb.jardin||false,terrasse:nb.terrasse||false,garage:nb.garage||false,parking:nb.parking||false,statut:"disponible",date:nb.date});setBiens(l=>[...l,nb]);pop();}}/>}
           {nav==="equipe"&&<EquipeView agents={agents} acquereurs={acquereurs} biens={biens} agent={agent} enAttente={enAttente} onApprouver={onApprouver} onRefuser={onRefuser} onUpdateAgent={onUpdateAgent}/>}
           {nav==="notifs"&&<NotifsView notifs={notifs.filter(n=>n.toAgentId===agent.id)} agents={agents} enAttente={isDir?enAttente:[]} onApprouver={onApprouver} onRefuser={onRefuser} onRead={async id=>{await db.upsert("notifications",{id,lu:true});setNotifs(ns=>ns.map(n=>n.id===id?{...n,lu:true}:n));}} onReadAll={async()=>{const mine=notifs.filter(n=>n.toAgentId===agent.id&&!n.lu);for(const n of mine)await db.upsert("notifications",{id:n.id,lu:true});setNotifs(ns=>ns.map(n=>n.toAgentId===agent.id?{...n,lu:true}:n));}}/>}
         </div>
