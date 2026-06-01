@@ -45,6 +45,25 @@ const getInitiale = n => (n||"?").charAt(0).toUpperCase();
 const getColor = i => AGENT_COLORS[i % AGENT_COLORS.length];
 
 // ── IMPORT PDF ────────────────────────────────────────────────────────────────
+// -- CLAUDE API --
+async function callClaude(body) {
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({ ...body, model: "claude-sonnet-4-20250514" })
+    });
+    const d = await r.json();
+    if (d.error) { console.error("API:", d.error.message); return null; }
+    const t = d.content?.[0]?.text || "{}";
+    return JSON.parse(t.replace(/```json|```/g,"").trim());
+  } catch(e) { console.error("Claude:", e); return null; }
+}
+
 async function importerPDF(file) {
   const base64 = await new Promise((res, rej) => {
     const r = new FileReader();
@@ -83,18 +102,10 @@ Réponds UNIQUEMENT en JSON valide sans backticks:
   "surfaces_annexes":[{"nom":"string","surface":number|null}]
 }`;
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1500,
-        messages:[{ role:"user", content:[
-          { type:"document", source:{ type:"base64", media_type:"application/pdf", data:base64 }},
-          { type:"text", text:prompt }
-        ]}]
-      })
-    });
-    const d = await r.json();
-    return JSON.parse((d.content?.[0]?.text||"{}").replace(/```json|```/g,"").trim());
-  } catch { return {}; }
+    return await callClaude({ max_tokens:1500, messages:[{ role:"user", content:[
+      { type:"document", source:{ type:"base64", media_type:"application/pdf", data:base64 }},
+      { type:"text", text:prompt }
+    ]}]}) || {};
 }
 
 // ── IMPORT PAR URL ────────────────────────────────────────────────────────────
@@ -136,15 +147,7 @@ Réponds UNIQUEMENT en JSON valide sans backticks:
   "source":"IAD"|"SeLoger"|"Leboncoin"|"BienIci"|"PAP"|"Logic-Immo"|"autre"
 }`;
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:800,
-        messages:[{ role:"user", content:prompt }]
-      })
-    });
-    const d = await r.json();
-    return JSON.parse((d.content?.[0]?.text||"{}").replace(/```json|```/g,"").trim());
-  } catch { return {}; }
+    return await callClaude({ max_tokens:800, messages:[{ role:"user", content:prompt }]}) || {};
 }
 
 // ── IA ACQUÉREUR ──────────────────────────────────────────────────────────────
