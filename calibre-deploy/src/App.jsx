@@ -71,44 +71,16 @@ async function importerPDF(file) {
     r.onerror = rej;
     r.readAsDataURL(file);
   });
-  const prompt = `Extrais TOUTES les informations de cette fiche immobilière IAD ou autre agence.
-Réponds UNIQUEMENT en JSON valide sans backticks:
-{
-  "type":"Appartement"|"Maison"|"Studio"|"Terrain",
-  "prix":number|null,
-  "surface":number|null,
-  "surface_terrain":number|null,
-  "pieces":number|null,
-  "chambres":number|null,
-  "salles_de_bain":number|null,
-  "etage":number|null,
-  "niveaux":number|null,
-  "adresse":"adresse complète avec ville et CP"|null,
-  "ville":"ville"|null,
-  "code_postal":"CP"|null,
-  "caracteristiques":["piscine","jardin","terrasse","garage","parking","cave","balcon","dressing","buanderie","bureau","panneaux_solaires","portail","videophone","plancher_chauffant","climatisation","cheminee","cuisine_equipee","fibre_optique"],
-  "dpe":"A"|"B"|"C"|"D"|"E"|"F"|"G"|null,
-  "ges":"A"|"B"|"C"|"D"|"E"|"F"|"G"|null,
-  "annee_construction":number|null,
-  "taxe_fonciere":number|null,
-  "numero_mandat":"string"|null,
-  "agent":"nom agent"|null,
-  "exposition":"Sud"|"Nord"|"Est"|"Ouest"|"Sud-Est"|"Sud-Ouest"|null,
-  "chauffage":"Individuel"|"Collectif"|null,
-  "description":"description complète 4-5 phrases",
-  "titre":"titre court",
-  "source":"IAD"|"autre",
-  "detail_pieces":[{"nom":"nom pièce","surface":number|null,"niveau":number|null,"equipements":["string"]}],
-  "surfaces_annexes":[{"nom":"string","surface":number|null}]
-}`;
-  try {
-    return await callClaude({ max_tokens:1500, messages:[{ role:"user", content:[
+  const prompt = "Extrais TOUTES les informations de cette fiche immobiliere. Reponds UNIQUEMENT en JSON valide sans backticks: {type,prix,surface,surface_terrain,pieces,chambres,salles_de_bain,etage,adresse,ville,code_postal,caracteristiques,dpe,annee_construction,taxe_fonciere,numero_mandat,agent,exposition,description,titre,detail_pieces:[{nom,surface,niveau,equipements}],surfaces_annexes:[{nom,surface}]}";
+  return await callClaude({
+    max_tokens: 1500,
+    messages:[{ role:"user", content:[
       { type:"document", source:{ type:"base64", media_type:"application/pdf", data:base64 }},
       { type:"text", text:prompt }
-    ]}]}) || {};
+    ]}]
+  }) || {};
 }
 
-// ── IMPORT PAR URL ────────────────────────────────────────────────────────────
 async function importerAnnonce(url) {
   let contenu = `URL de l'annonce: ${url}`;
   try {
