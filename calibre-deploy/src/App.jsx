@@ -1148,22 +1148,27 @@ function NewBien({ agent, onBack, onSave }) {
   const appliquer = c => {
     if (!c||!Object.keys(c).length) return;
     setImported(c);
+    const loc = c.ville ? (c.code_postal ? c.ville+" "+c.code_postal : c.ville) : (c.adresse||f.adresse);
     upd({
-      adresse:c.adresse||f.adresse, prix:c.prix?String(c.prix):f.prix,
-      surface:c.surface?String(c.surface):f.surface, surface_terrain:c.surface_terrain?String(c.surface_terrain):f.surface_terrain,
-      pieces:c.pieces?String(c.pieces):f.pieces, chambres:c.chambres?String(c.chambres):f.chambres,
-      salles_de_bain:c.salles_de_bain?String(c.salles_de_bain):f.salles_de_bain,
-      type:c.type||f.type, dpe:c.dpe||f.dpe,
-      etage:c.etage!=null?String(c.etage):f.etage,
-      annee_construction:c.annee_construction?String(c.annee_construction):f.annee_construction,
-      taxe_fonciere:c.taxe_fonciere?String(c.taxe_fonciere):f.taxe_fonciere,
-      numero_mandat:c.numero_mandat||f.numero_mandat,
-      piscine:c.caracteristiques?.includes("piscine")||f.piscine,
-      jardin:c.caracteristiques?.includes("jardin")||f.jardin,
-      terrasse:c.caracteristiques?.includes("terrasse")||f.terrasse,
-      garage:c.caracteristiques?.includes("garage")||f.garage,
-      parking:c.caracteristiques?.includes("parking")||f.parking,
+      adresse: loc,
+      prix: c.prix ? String(c.prix) : f.prix,
+      surface: c.surface ? String(c.surface) : f.surface,
+      surface_terrain: c.surface_terrain ? String(c.surface_terrain) : f.surface_terrain,
+      pieces: c.pieces ? String(c.pieces) : f.pieces,
+      chambres: c.chambres ? String(c.chambres) : f.chambres,
+      salles_de_bain: c.salles_de_bain ? String(c.salles_de_bain) : f.salles_de_bain,
+      type: c.type||f.type, dpe: c.dpe||f.dpe,
+      etage: c.etage!=null ? String(c.etage) : f.etage,
+      annee_construction: c.annee_construction ? String(c.annee_construction) : f.annee_construction,
+      taxe_fonciere: c.taxe_fonciere ? String(c.taxe_fonciere) : f.taxe_fonciere,
+      numero_mandat: c.numero_mandat||f.numero_mandat,
+      piscine: c.caracteristiques?.includes("piscine")||f.piscine,
+      jardin: c.caracteristiques?.includes("jardin")||f.jardin,
+      terrasse: c.caracteristiques?.includes("terrasse")||f.terrasse,
+      garage: c.caracteristiques?.includes("garage")||f.garage,
+      parking: c.caracteristiques?.includes("parking")||f.parking,
     });
+    setMode("manuel");
   };
 
   const handlePDF=async e=>{const file=e.target.files[0];if(!file)return;setPdfNom(file.name);setLoading(true);const c=await importerPDF(file);appliquer(c);setLoading(false);};
@@ -1296,7 +1301,7 @@ function NewBien({ agent, onBack, onSave }) {
 
         {/* FICHE */}
         <Sec title={imported?"✏️ Vérifier et compléter":"Saisie manuelle"}>
-          <Inp label="Adresse *" val={f.adresse} set={v=>upd({adresse:v})} ph="Montauroux 83440, France"/>
+          <Inp label="Ville *" val={f.adresse} set={v=>upd({adresse:v})} ph="Montauroux, Fayence, Callian..."/>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
             <Inp label="Prix (€) *" val={f.prix} set={v=>upd({prix:v})} ph="620000" type="number"/>
             <Inp label="Surface hab. (m²) *" val={f.surface} set={v=>upd({surface:v})} ph="151" type="number"/>
