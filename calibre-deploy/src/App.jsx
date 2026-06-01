@@ -60,11 +60,7 @@ async function callClaude(body) {
 }
 
 async function importerPDF(file) {
-  if (file.size > 15 * 1024 * 1024) {
-    alert("PDF trop volumineux (max 15MB).");
-    return {};
-  }
-  const base64 = await new Promise((res, rej) => {
+const base64 = await new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = () => res(r.result.split(",")[1]);
     r.onerror = rej;
