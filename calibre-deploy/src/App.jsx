@@ -45,7 +45,6 @@ const getInitiale = n => (n||"?").charAt(0).toUpperCase();
 const getColor = i => AGENT_COLORS[i % AGENT_COLORS.length];
 
 // ── IMPORT PDF ────────────────────────────────────────────────────────────────
-// -- CLAUDE API --
 async function callClaude(body) {
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
@@ -71,16 +70,47 @@ async function importerPDF(file) {
     r.onerror = rej;
     r.readAsDataURL(file);
   });
-  const prompt = "Extrais TOUTES les informations de cette fiche immobiliere. Reponds UNIQUEMENT en JSON valide sans backticks: {type,prix,surface,surface_terrain,pieces,chambres,salles_de_bain,etage,adresse,ville,code_postal,caracteristiques,dpe,annee_construction,taxe_fonciere,numero_mandat,agent,exposition,description,titre,detail_pieces:[{nom,surface,niveau,equipements}],surfaces_annexes:[{nom,surface}]}";
-  return await callClaude({
+  const prompt = `Extrais TOUTES les informations de cette fiche immobilière IAD ou autre agence.
+Réponds UNIQUEMENT en JSON valide sans backticks:
+{
+  "type":"Appartement"|"Maison"|"Studio"|"Terrain",
+  "prix":number|null,
+  "surface":number|null,
+  "surface_terrain":number|null,
+  "pieces":number|null,
+  "chambres":number|null,
+  "salles_de_bain":number|null,
+  "etage":number|null,
+  "niveaux":number|null,
+  "adresse":"adresse complète avec ville et CP"|null,
+  "ville":"ville"|null,
+  "code_postal":"CP"|null,
+  "caracteristiques":["piscine","jardin","terrasse","garage","parking","cave","balcon","dressing","buanderie","bureau","panneaux_solaires","portail","videophone","plancher_chauffant","climatisation","cheminee","cuisine_equipee","fibre_optique"],
+  "dpe":"A"|"B"|"C"|"D"|"E"|"F"|"G"|null,
+  "ges":"A"|"B"|"C"|"D"|"E"|"F"|"G"|null,
+  "annee_construction":number|null,
+  "taxe_fonciere":number|null,
+  "numero_mandat":"string"|null,
+  "agent":"nom agent"|null,
+  "exposition":"Sud"|"Nord"|"Est"|"Ouest"|"Sud-Est"|"Sud-Ouest"|null,
+  "chauffage":"Individuel"|"Collectif"|null,
+  "description":"description complète 4-5 phrases",
+  "titre":"titre court",
+  "source":"IAD"|"autre",
+  "detail_pieces":[{"nom":"nom pièce","surface":number|null,"niveau":number|null,"equipements":["string"]}],
+  "surfaces_annexes":[{"nom":"string","surface":number|null}]
+}`;
+  const res = await callClaude({
     max_tokens: 1500,
     messages:[{ role:"user", content:[
       { type:"document", source:{ type:"base64", media_type:"application/pdf", data:base64 }},
       { type:"text", text:prompt }
     ]}]
-  }) || {};
+  });
+  return res || {};
 }
 
+// ── IMPORT PAR URL ────────────────────────────────────────────────────────────
 async function importerAnnonce(url) {
   let contenu = `URL de l'annonce: ${url}`;
   try {
@@ -119,7 +149,15 @@ Réponds UNIQUEMENT en JSON valide sans backticks:
   "source":"IAD"|"SeLoger"|"Leboncoin"|"BienIci"|"PAP"|"Logic-Immo"|"autre"
 }`;
   try {
-    return await callClaude({ max_tokens:800, messages:[{ role:"user", content:prompt }]}) || {};
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:800,
+        messages:[{ role:"user", content:prompt }]
+      })
+    });
+    const d = await r.json();
+    return JSON.parse((d.content?.[0]?.text||"{}").replace(/```json|```/g,"").trim());
+  } catch { return {}; }
 }
 
 // ── IA ACQUÉREUR ──────────────────────────────────────────────────────────────
@@ -143,16 +181,8 @@ Réponds UNIQUEMENT en JSON sans backticks:
   "annee_construction_min":number|null,
   "resume":"1 phrase courte"
 }`;
-  try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:800,
-        messages:[{ role:"user", content:prompt }]
-      })
-    });
-    const d = await r.json();
-    return JSON.parse((d.content?.[0]?.text||"{}").replace(/```json|```/g,"").trim());
-  } catch { return {}; }
+  const res = await callClaude({ max_tokens:800, messages:[{ role:"user", content:prompt }] });
+  return res || {};
 }
 
 // ── MATCHING BIDIRECTIONNEL ───────────────────────────────────────────────────
