@@ -50,7 +50,7 @@ async function callClaude(body) {
     const r = await fetch("/api/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...body, model: "claude-sonnet-4-20250514" })
+      body: JSON.stringify({ ...body, model: "claude-haiku-4-5-20251001" })
     });
     const d = await r.json();
     if (d.error) { console.error("API:", d.error); return null; }
@@ -147,7 +147,7 @@ Réponds UNIQUEMENT en JSON valide sans backticks:
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:800,
+      body: JSON.stringify({ model:"claude-haiku-4-5-20251001", max_tokens:800,
         messages:[{ role:"user", content:prompt }]
       })
     });
