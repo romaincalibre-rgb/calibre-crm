@@ -60,29 +60,48 @@ async function callClaude(body) {
 }
 
 async function importerPDF(file) {
-const base64 = await new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(",")[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-  const prompt = "Extrais les données immobilières de ce PDF IAD en JSON pur sans backticks ni commentaires. Champs: type,prix,surface,surface_terrain,pieces,chambres,salles_de_bain,adresse,ville,code_postal,dpe,annee_construction,taxe_fonciere,numero_mandat,description,caracteristiques,detail_pieces,surfaces_annexes. Mets null si absent.";
   try {
-    const r = await fetch("/api/claude", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        pdf_base64: base64,
-        prompt: prompt,
-        model: "claude-sonnet-4-6",
-        max_tokens: 1500
-      })
+    // Charger pdf.js depuis CDN pour extraire le texte côté navigateur
+    if (!window.pdfjsLib) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        s.onload = () => {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          res();
+        };
+        s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+
+    // Lire le fichier
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    
+    // Extraire tout le texte
+    let texte = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      texte += content.items.map(item => item.str).join(' ') + '\n';
+    }
+    texte = texte.substring(0, 6000);
+    
+    if (!texte.trim()) return {};
+    
+    const prompt = "Extrais les données immobilières de cette fiche IAD en JSON pur sans backticks. Champs requis: type,prix,surface,surface_terrain,pieces,chambres,salles_de_bain,adresse,ville,code_postal,dpe,annee_construction,taxe_fonciere,numero_mandat,description,caracteristiques(tableau),detail_pieces(tableau {nom,surface,niveau}),surfaces_annexes(tableau {nom,surface}). Mets null si absent.\n\nTexte du PDF:\n" + texte;
+    
+    const res = await callClaude({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1500,
+      messages:[{ role:"user", content: prompt }]
     });
-    const d = await r.json();
-    if (d.error) { console.error("PDF error:", d.error); return {}; }
-    const t = d.content?.[0]?.text || "{}";
-    return JSON.parse(t.replace(/```json|```/g,"").trim());
-  } catch(e) { console.error("importerPDF:", e); return {}; }
+    return res || {};
+  } catch(e) { 
+    console.error("PDF error:", e); 
+    return {}; 
+  }
 }
 
 async function importerAnnonce(url) {
