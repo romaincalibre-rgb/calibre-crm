@@ -237,11 +237,11 @@ function calculerScore(bien, criteres) {
   else if ((c.villes||[]).length) ko.push(`Secteur: ${c.villes.join(", ")}`);
 
   // MATCHING PAR PIÈCE (8pts chacune)
-  if (c.criteres_pieces?.length && bien.detail_pieces?.length) {
+  if (c.criteres_pieces?.length && safePieces?.length) {
     c.criteres_pieces.forEach(cp => {
       if (!cp.nom) return;
       const nomC = cp.nom.toLowerCase();
-      const piecesBien = bien.detail_pieces.filter(p => {
+      const piecesBien = safePieces.filter(p => {
         const nomP = p.nom?.toLowerCase()||"";
         if (nomC.includes("salon")||nomC.includes("pièce de vie")||nomC.includes("séjour")||nomC.includes("salle à manger")||nomC.includes("living"))
           return nomP.includes("salon")||nomP.includes("séjour")||nomP.includes("salle à manger")||nomP.includes("pièce de vie")||nomP.includes("living");
@@ -332,7 +332,7 @@ export default function App() {
   const [appLoading,setAppLoading]=useState(true);
   const [authScreen, setAuthScreen] = useState("login");
 
-  useEffect(()=>{const load=async()=>{const[ag,acq,bi,no]=await Promise.all([db.get("agents"),db.get("acquereurs"),db.get("biens"),db.get("notifications")]);if(ag&&ag.length)setAgents(ag.map(a=>({...a,agentId:a.agent_id,dateInscription:a.date_inscription,biens_visites:a.biens_visites||[],criteres:a.criteres||{}})));if(acq&&acq.length)setAcquereurs(acq.map(a=>({...a,agentId:a.agent_id,biens_visites:a.biens_visites||[],criteres:a.criteres||{}})));if(bi&&bi.length)setBiens(bi.map(b=>({...b,agentId:b.agent_id,caracteristiques:b.caracteristiques||[],detail_pieces:b.detail_pieces||[],surfaces_annexes:b.surfaces_annexes||[]})));if(no&&no.length)setNotifs(no.map(n=>({...n,toAgentId:n.to_agent_id,fromAgentId:n.from_agent_id})));setAppLoading(false);};load();const t=setInterval(load,8000);return()=>clearInterval(t);},[]);
+  useEffect(()=>{const load=async()=>{const[ag,acq,bi,no]=await Promise.all([db.get("agents"),db.get("acquereurs"),db.get("biens"),db.get("notifications")]);if(ag&&ag.length)setAgents(ag.map(a=>({...a,agentId:a.agent_id,dateInscription:a.date_inscription,biens_visites:a.biens_visites||[],criteres:a.criteres||{}})));if(acq&&acq.length)setAcquereurs(acq.map(a=>({...a,agentId:a.agent_id,biens_visites:a.biens_visites||[],criteres:a.criteres||{}})));if(bi&&bi.length)setBiens(bi.map(b=>({...b,agentId:b.agent_id,caracteristiques:Array.isArray(b.caracteristiques)?b.caracteristiques:[],detail_pieces:Array.isArray(b.detail_pieces)?b.detail_pieces:[],surfaces_annexes:Array.isArray(b.surfaces_annexes)?b.surfaces_annexes:[],prix:b.prix||0,surface:b.surface||0,pieces:b.pieces||0,chambres:b.chambres||0,salles_de_bain:b.salles_de_bain||0,surface_terrain:b.surface_terrain||0})));if(no&&no.length)setNotifs(no.map(n=>({...n,toAgentId:n.to_agent_id,fromAgentId:n.from_agent_id})));setAppLoading(false);};load();const t=setInterval(load,8000);return()=>clearInterval(t);},[]);
 
   const agentCo=sessionId?agents.find(a=>a.id===sessionId):null;
   const enAttente = agents.filter(a=>a.statut==="en_attente");
@@ -829,6 +829,10 @@ function BienList({ biens, acquereurs, agents, agent, onSelect, onNew }) {
 
 // ── DÉTAIL BIEN ───────────────────────────────────────────────────────────────
 function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif, onDelete }) {
+  if(!bien) return null;
+  const safeCarac = Array.isArray(bien.caracteristiques)?bien.caracteristiques:[];
+  const safePieces = Array.isArray(bien.detail_pieces)?bien.detail_pieces:[];
+  const safeSurfaces = Array.isArray(bien.surfaces_annexes)?bien.surfaces_annexes:[];
   const [tab,setTab]=useState("fiche");
   const owner=agents.find(a=>a.id===bien.agentId);
   const isOwn=bien.agentId===agent.id;
@@ -886,11 +890,11 @@ function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif, onDelete
           </Sec>
 
           {/* Détail pièces */}
-          {bien.detail_pieces?.length>0&&(
-            <Sec title={`📐 Pièces (${bien.detail_pieces.length})`}>
+          {safePieces?.length>0&&(
+            <Sec title={`📐 Pièces (${safePieces.length})`}>
               <div style={{background:`${C.teal}06`,border:`1px solid ${C.teal}12`,borderRadius:12,overflow:"hidden"}}>
-                {bien.detail_pieces.map((p,i)=>(
-                  <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 12px",borderBottom:i<bien.detail_pieces.length-1?`1px solid ${C.teal}08`:"none",background:i%2===0?"transparent":`${C.teal}03`}}>
+                {safePieces.map((p,i)=>(
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 12px",borderBottom:i<safePieces.length-1?`1px solid ${C.teal}08`:"none",background:i%2===0?"transparent":`${C.teal}03`}}>
                     <div style={{flex:1}}>
                       <span style={{fontWeight:600,fontSize:13,color:C.text}}>{p.nom}</span>
                       {p.niveau!==undefined&&<span style={{fontSize:10,color:C.textMuted,marginLeft:6}}>{p.niveau===0?"RDC":`Étage ${p.niveau}`}</span>}
@@ -904,10 +908,10 @@ function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif, onDelete
           )}
 
           {/* Surfaces annexes */}
-          {bien.surfaces_annexes?.length>0&&(
+          {safeSurfaces?.length>0&&(
             <Sec title="🏗️ Surfaces annexes">
               <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                {bien.surfaces_annexes.map((s,i)=>(
+                {safeSurfaces.map((s,i)=>(
                   <div key={i} style={{background:C.accent,border:`1px solid ${C.teal}20`,borderRadius:10,padding:"6px 12px",fontSize:12}}>
                     <span style={{fontWeight:600,color:C.teal}}>{s.nom}</span>
                     {s.surface&&<span style={{color:C.textSub,marginLeft:6}}>{s.surface}m²</span>}
