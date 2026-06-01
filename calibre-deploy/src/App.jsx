@@ -61,37 +61,45 @@ async function callClaude(body) {
 
 async function importerPDF(file) {
   try {
-    // Extraire le texte du PDF côté navigateur avec PDF.js (gratuit, rapide)
-    const arrayBuffer = await file.arrayBuffer();
-    const pdfjsLib = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.mjs');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.mjs';
+    // Charger PDF.js via script tag si pas encore chargé
+    if (!window.pdfjsLib) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        script.onload = () => {
+          window.pdfjsLib = window['pdfjs-dist/build/pdf'];
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          resolve();
+        };
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
     
-    const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let texte = '';
-    const nbPages = Math.min(pdfDoc.numPages, 10); // max 10 pages
+    const nbPages = Math.min(pdfDoc.numPages, 15);
     for (let i = 1; i <= nbPages; i++) {
       const page = await pdfDoc.getPage(i);
       const content = await page.getTextContent();
       texte += content.items.map(item => item.str).join(' ') + '\n';
     }
-    texte = texte.substring(0, 6000);
+    texte = texte.replace(/\s+/g, ' ').trim().substring(0, 6000);
     
-    if (!texte.trim()) {
-      alert("Le PDF ne contient pas de texte extractible.");
-      return {};
-    }
+    if (!texte) { alert("Impossible d'extraire le texte du PDF."); return {}; }
     
-    const prompt = "Extrais les données immobilières de ce texte de fiche IAD en JSON pur sans backticks ni commentaires. Champs requis: type,prix,surface,surface_terrain,pieces,chambres,salles_de_bain,adresse,ville,code_postal,dpe,annee_construction,taxe_fonciere,numero_mandat,description,caracteristiques:[],detail_pieces:[{nom,surface,niveau}],surfaces_annexes:[{nom,surface}]. Mets null si absent.";
+    const prompt = "Extrais les données immobilières de ce texte en JSON pur sans backticks. Champs: type,prix,surface,surface_terrain,pieces,chambres,salles_de_bain,adresse,ville,code_postal,dpe,annee_construction,taxe_fonciere,numero_mandat,description,caracteristiques:[],detail_pieces:[{nom,surface,niveau}],surfaces_annexes:[{nom,surface}]. null si absent.";
     
     const res = await callClaude({
       model: "claude-sonnet-4-6",
       max_tokens: 1500,
-      messages:[{ role:"user", content: prompt + "\n\nTexte PDF:\n" + texte }]
+      messages:[{ role:"user", content: prompt + "\n\n" + texte }]
     });
     return res || {};
   } catch(e) {
     console.error("importerPDF:", e);
-    alert("Erreur lecture PDF: " + e.message);
+    alert("Erreur: " + e.message);
     return {};
   }
 }
