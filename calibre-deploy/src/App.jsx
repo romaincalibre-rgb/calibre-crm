@@ -60,9 +60,8 @@ async function callClaude(body) {
 }
 
 async function importerPDF(file) {
-  // Vérifier la taille du fichier (max 10MB)
-  if (file.size > 10 * 1024 * 1024) {
-    alert("PDF trop volumineux (max 10MB). Compressez-le d'abord.");
+  if (file.size > 15 * 1024 * 1024) {
+    alert("PDF trop volumineux (max 15MB).");
     return {};
   }
   const base64 = await new Promise((res, rej) => {
@@ -71,15 +70,23 @@ async function importerPDF(file) {
     r.onerror = rej;
     r.readAsDataURL(file);
   });
-  const prompt = "Tu es expert immobilier. Lis cette fiche IAD et extrais les données en JSON pur sans backticks:\n{type,prix,surface,surface_terrain,pieces,chambres,salles_de_bain,adresse,ville,code_postal,dpe,annee_construction,taxe_fonciere,numero_mandat,description,caracteristiques,detail_pieces:[{nom,surface,niveau}],surfaces_annexes:[{nom,surface}]}\nMets null si non trouvé.";
-  const res = await callClaude({
-    max_tokens: 2000,
-    messages:[{ role:"user", content:[
-      { type:"document", source:{ type:"base64", media_type:"application/pdf", data:base64 }},
-      { type:"text", text:prompt }
-    ]}]
-  });
-  return res || {};
+  const prompt = "Extrais les données immobilières de ce PDF IAD en JSON pur sans backticks ni commentaires. Champs: type,prix,surface,surface_terrain,pieces,chambres,salles_de_bain,adresse,ville,code_postal,dpe,annee_construction,taxe_fonciere,numero_mandat,description,caracteristiques,detail_pieces,surfaces_annexes. Mets null si absent.";
+  try {
+    const r = await fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        pdf_base64: base64,
+        prompt: prompt,
+        model: "claude-sonnet-4-6",
+        max_tokens: 1500
+      })
+    });
+    const d = await r.json();
+    if (d.error) { console.error("PDF error:", d.error); return {}; }
+    const t = d.content?.[0]?.text || "{}";
+    return JSON.parse(t.replace(/```json|```/g,"").trim());
+  } catch(e) { console.error("importerPDF:", e); return {}; }
 }
 
 async function importerAnnonce(url) {
