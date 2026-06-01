@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 const SUPA_URL="https://wzygqvtexcyamoqayidf.supabase.co";
 const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6eWdxdnRleGN5YW1vcWF5aWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDczMzgsImV4cCI6MjA5NTYyMzMzOH0.fvQO5s7-XH9DxzHfWzDBqLbtqbIJ7Tp1h2c_IdsP-a4";
 const SH={"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":"Bearer "+SUPA_KEY};
-const db={async get(t){try{const r=await fetch(SUPA_URL+"/rest/v1/"+t+"?order=created_at.asc",{headers:SH});return await r.json();}catch{return [];}},async upsert(t,d){try{await fetch(SUPA_URL+"/rest/v1/"+t,{method:"POST",headers:{...SH,"Prefer":"resolution=merge-duplicates"},body:JSON.stringify(d)});}catch{}}};
+const db={async get(t){try{const r=await fetch(SUPA_URL+"/rest/v1/"+t+"?order=created_at.asc",{headers:SH});return await r.json();}catch{return [];}},async upsert(t,d){try{await fetch(SUPA_URL+"/rest/v1/"+t,{method:"POST",headers:{...SH,"Prefer":"resolution=merge-duplicates"},body:JSON.stringify(d)});}catch{}},async remove(t,id){try{await fetch(SUPA_URL+"/rest/v1/"+t+"?id=eq."+encodeURIComponent(id),{method:"DELETE",headers:SH});}catch{}}};
 const getLS=()=>{try{return localStorage.getItem("cal_v8_s");}catch{return null;}};
 const setLS=(id)=>{try{localStorage.setItem("cal_v8_s",id||"");}catch{}};
 
@@ -516,7 +516,7 @@ function CRMApp({ agent, agents, acquereurs, setAcquereurs, biens, setBiens, not
           {nav==="acquereurs"&&cur.screen==="detail"&&<AcqDetail acq={acquereurs.find(a=>a.id===cur.id)} biens={biens} agents={agents} agent={agent} onBack={pop} onUpdate={async a=>{await db.upsert("acquereurs",{id:a.id,agent_id:a.agentId,nom:a.nom||"",prenom:a.prenom||"",tel:a.tel||"",email:a.email||"",photo:a.photo||null,stage:a.stage||"nouveau",qualification:a.qualification||null,note_brute:a.note_brute||"",criteres:a.criteres||{},situation:a.situation||"",nb_enfants:a.nb_enfants||0,metier_m:a.metier_m||"",metier_f:a.metier_f||"",notes_profil:a.notes_profil||"",biens_visites:a.biens_visites||[],alerte:a.alerte||false,date:a.date||""});setAcquereurs(l=>l.map(x=>x.id===a.id?a:x));}} onNotif={onNotif}/>}
           {nav==="acquereurs"&&cur.screen==="new"&&<NewAcq agent={agent} onBack={pop} onSave={async a=>{const na={...a,id:Date.now().toString(),biens_visites:[],alerte:false,date:new Date().toISOString().split("T")[0]};await db.upsert("acquereurs",{id:na.id,agent_id:na.agentId,nom:na.nom||"",prenom:na.prenom||"",tel:na.tel||"",email:na.email||"",photo:null,stage:na.stage||"nouveau",criteres:na.criteres||{},biens_visites:[],alerte:false,date:na.date});setAcquereurs(l=>[...l,na]);pop();}}/>}
           {nav==="biens"&&cur.screen==="list"&&<BienList biens={biens} acquereurs={acquereurs} agents={agents} agent={agent} onSelect={b=>push({screen:"detail",id:b.id})} onNew={()=>push({screen:"new"})}/>}
-          {nav==="biens"&&cur.screen==="detail"&&<BienDetail bien={biens.find(b=>b.id===cur.id)} acquereurs={acquereurs} agents={agents} agent={agent} onBack={pop} onNotif={onNotif}/>}
+          {nav==="biens"&&cur.screen==="detail"&&<BienDetail bien={biens.find(b=>b.id===cur.id)} acquereurs={acquereurs} agents={agents} agent={agent} onBack={pop} onNotif={onNotif} onDelete={async id=>{await db.remove("biens",id);setBiens(l=>l.filter(b=>b.id!==id));pop();}}/>}
           {nav==="biens"&&cur.screen==="new"&&<NewBien agent={agent} onBack={pop} onSave={async b=>{const nb={...b,id:Date.now().toString(),date:new Date().toISOString().split("T")[0],statut:"disponible"};await db.upsert("biens",{id:nb.id,agent_id:nb.agentId,adresse:nb.adresse||"",ville:nb.ville||"",type:nb.type||"Maison",prix:nb.prix||0,surface:nb.surface||0,surface_terrain:nb.surface_terrain||0,pieces:nb.pieces||0,chambres:nb.chambres||0,dpe:nb.dpe||"",description:nb.description||"",caracteristiques:nb.caracteristiques||[],detail_pieces:nb.detail_pieces||[],surfaces_annexes:nb.surfaces_annexes||[],piscine:nb.piscine||false,jardin:nb.jardin||false,terrasse:nb.terrasse||false,garage:nb.garage||false,parking:nb.parking||false,statut:"disponible",date:nb.date});setBiens(l=>[...l,nb]);pop();}}/>}
           {nav==="equipe"&&<EquipeView agents={agents} acquereurs={acquereurs} biens={biens} agent={agent} enAttente={enAttente} onApprouver={onApprouver} onRefuser={onRefuser} onUpdateAgent={onUpdateAgent}/>}
           {nav==="notifs"&&<NotifsView notifs={notifs.filter(n=>n.toAgentId===agent.id)} agents={agents} enAttente={isDir?enAttente:[]} onApprouver={onApprouver} onRefuser={onRefuser} onRead={async id=>{await db.upsert("notifications",{id,lu:true});setNotifs(ns=>ns.map(n=>n.id===id?{...n,lu:true}:n));}} onReadAll={async()=>{const mine=notifs.filter(n=>n.toAgentId===agent.id&&!n.lu);for(const n of mine)await db.upsert("notifications",{id:n.id,lu:true});setNotifs(ns=>ns.map(n=>n.toAgentId===agent.id?{...n,lu:true}:n));}}/>}
@@ -828,7 +828,7 @@ function BienList({ biens, acquereurs, agents, agent, onSelect, onNew }) {
 }
 
 // ── DÉTAIL BIEN ───────────────────────────────────────────────────────────────
-function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif }) {
+function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif, onDelete }) {
   const [tab,setTab]=useState("fiche");
   const owner=agents.find(a=>a.id===bien.agentId);
   const isOwn=bien.agentId===agent.id;
@@ -842,7 +842,7 @@ function BienDetail({ bien, acquereurs, agents, agent, onBack, onNotif }) {
           <div style={S.detailName}>{bien.type} — {bien.ville||bien.adresse?.split(",")[0]||"Bien"}</div>
           <div style={{display:"flex",gap:5,marginTop:2,flexWrap:"wrap"}}>
             <span style={{...S.tag,background:owner?.color||C.teal}}>{isOwn?"Mon bien":owner?.nom}</span>
-            {bien.numero_mandat&&<span style={{...S.pill,background:C.teal+"15",color:C.teal}}>N°{bien.numero_mandat}</span>}
+            {bien.numero_mandat&&<span style={{...S.pill,background:C.teal+"15",color:C.teal}}>N°{bien.numero_mandat}</span>}{isOwn&&<button onClick={()=>{if(window.confirm("Supprimer ce bien ?"))onDelete(bien.id);}} style={{background:"rgba(192,57,43,0.15)",border:"1px solid rgba(192,57,43,0.3)",borderRadius:8,width:30,height:30,color:C.danger,fontSize:14,cursor:"pointer",flexShrink:0}}>🗑️</button>}
           </div>
         </div>
       </div>
