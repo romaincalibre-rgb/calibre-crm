@@ -47,17 +47,13 @@ const getColor = i => AGENT_COLORS[i % AGENT_COLORS.length];
 // ── IMPORT PDF ────────────────────────────────────────────────────────────────
 async function callClaude(body) {
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    const r = await fetch("/api/claude", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...body, model: "claude-sonnet-4-20250514" })
     });
     const d = await r.json();
-    if (d.error) { console.error("API:", d.error.message); return null; }
+    if (d.error) { console.error("API:", d.error); return null; }
     const t = d.content?.[0]?.text || "{}";
     return JSON.parse(t.replace(/```json|```/g,"").trim());
   } catch(e) { console.error("Claude:", e); return null; }
