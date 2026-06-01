@@ -1164,10 +1164,11 @@ function NewBien({ agent, onBack, onSave }) {
       garage: c.caracteristiques?.includes("garage")||f.garage,
       parking: c.caracteristiques?.includes("parking")||f.parking,
     });
-    setMode("manuel");
+    // Basculer vers le formulaire après mise à jour du state
+    setTimeout(()=>setMode("manuel"), 50);
   };
 
-  const handlePDF=async e=>{const file=e.target.files[0];if(!file)return;setPdfNom(file.name);setLoading(true);const c=await importerPDF(file);appliquer(c);setLoading(false);};
+  const handlePDF=async e=>{const file=e.target.files[0];if(!file)return;setPdfNom(file.name);setLoading(true);const c=await importerPDF(file);if(c&&Object.keys(c).length>0){appliquer(c);}else{alert("Impossible de lire le PDF. Vérifiez le format.");}setLoading(false);};
   const handleUrl=async()=>{if(!urlInput.trim())return;setLoading(true);const c=await importerAnnonce(urlInput.trim());appliquer(c);setLoading(false);};
   const startV=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;const r=new SR();r.lang="fr-FR";r.continuous=true;r.interimResults=true;r.onresult=e=>setNote(Array.from(e.results).map(x=>x[0].transcript).join(" "));r.onend=()=>setRecording(false);r.start();recRef.current=r;setRecording(true);};
   const analyseVocal=async()=>{setLoading(true);const c=await analyserCriteresAcquereur(note);appliquer({...c,type:c.type,prix:null,surface:null});setLoading(false);};
