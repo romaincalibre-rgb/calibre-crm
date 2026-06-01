@@ -1324,7 +1324,7 @@ function NewBien({ agent, onBack, onSave }) {
         </Sec>
 
         <div style={{padding:"12px 16px 32px"}}>
-          <button onClick={sauvegarder} disabled={!f.adresse||!f.prix||!f.surface} style={{...S.primaryBtn,opacity:!f.adresse||!f.prix||!f.surface?0.4:1}}>✓ Enregistrer le bien</button>
+          <button onClick={sauvegarder} disabled={!f.adresse} style={{...S.primaryBtn,opacity:!f.adresse?0.4:1}}>✓ Enregistrer le bien</button>
         </div>
       </div>
     </div>
