@@ -61,47 +61,34 @@ async function callClaude(body) {
 
 async function importerPDF(file) {
   try {
-    // Charger PDF.js via script tag si pas encore chargé
     if (!window.pdfjsLib) {
       await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-        script.onload = () => {
-          window.pdfjsLib = window['pdfjs-dist/build/pdf'];
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        s.onload = () => {
+          window.pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+          if(window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
           resolve();
         };
-        script.onerror = reject;
-        document.head.appendChild(script);
+        s.onerror = reject;
+        document.head.appendChild(s);
       });
     }
-    
-    const arrayBuffer = await file.arrayBuffer();
-    const pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    if(!window.pdfjsLib) { alert("PDF.js non chargé"); return {}; }
+    const buf = await file.arrayBuffer();
+    const doc = await window.pdfjsLib.getDocument({data:buf}).promise;
     let texte = '';
-    const nbPages = Math.min(pdfDoc.numPages, 15);
-    for (let i = 1; i <= nbPages; i++) {
-      const page = await pdfDoc.getPage(i);
-      const content = await page.getTextContent();
-      texte += content.items.map(item => item.str).join(' ') + '\n';
+    for(let i=1;i<=Math.min(doc.numPages,15);i++){
+      const p = await doc.getPage(i);
+      const c = await p.getTextContent();
+      texte += c.items.map(x=>x.str).join(' ')+'\n';
     }
-    texte = texte.replace(/\s+/g, ' ').trim().substring(0, 6000);
-    
-    if (!texte) { alert("Impossible d'extraire le texte du PDF."); return {}; }
-    
+    texte = texte.replace(/\s+/g,' ').trim().substring(0,6000);
+    if(!texte){ alert("Aucun texte dans ce PDF."); return {}; }
     const prompt = "Extrais les données immobilières de ce texte en JSON pur sans backticks. Champs: type,prix,surface,surface_terrain,pieces,chambres,salles_de_bain,adresse,ville,code_postal,dpe,annee_construction,taxe_fonciere,numero_mandat,description,caracteristiques:[],detail_pieces:[{nom,surface,niveau}],surfaces_annexes:[{nom,surface}]. null si absent.";
-    
-    const res = await callClaude({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1500,
-      messages:[{ role:"user", content: prompt + "\n\n" + texte }]
-    });
+    const res = await callClaude({model:"claude-sonnet-4-6",max_tokens:1500,messages:[{role:"user",content:prompt+"\n\n"+texte}]});
     return res || {};
-  } catch(e) {
-    console.error("importerPDF:", e);
-    alert("Erreur: " + e.message);
-    return {};
-  }
+  } catch(e){ console.error("PDF:",e); alert("Erreur: "+e.message); return {}; }
 }
 
 async function importerAnnonce(url) {
